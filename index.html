@@ -2189,16 +2189,31 @@
                     <label>Provider</label>
                     <select id="setProvider">
                         <option value="none">— Mock (no API) —</option>
-                        <option value="openai">OpenAI</option>
-                        <option value="gemini">Google Gemini</option>
-                        <option value="anthropic">Anthropic (browser beta)</option>
+                        <optgroup label="Free (no card needed)">
+                            <option value="groq">Groq · Llama 3.3 70B</option>
+                            <option value="cerebras">Cerebras · Llama 3.3 70B</option>
+                            <option value="openrouter">OpenRouter · Free models</option>
+                            <option value="gemini">Google Gemini · 2.0 Flash Lite</option>
+                        </optgroup>
+                        <optgroup label="Paid">
+                            <option value="openai">OpenAI · gpt-4o-mini</option>
+                            <option value="anthropic">Anthropic · Claude Haiku 4.5</option>
+                        </optgroup>
+                        <optgroup label="Local (no key needed)">
+                            <option value="ollama">Ollama · localhost:11434</option>
+                        </optgroup>
                     </select>
                     <div id="setModelHint" style="font-size:11px; color:var(--muted); margin-top:6px;"></div>
                 </div>
-                <div class="field">
+                <div class="field" id="apiKeyField">
                     <label>API key</label>
                     <input type="password" id="setApiKey" placeholder="paste your key here" autocomplete="off" />
                     <small class="warn">⚠ Stored in your browser's localStorage. Don't use on shared machines.</small>
+                </div>
+                <div class="field" id="ollamaUrlField" style="display:none;">
+                    <label>Ollama URL</label>
+                    <input type="text" id="setOllamaUrl" placeholder="http://localhost:11434" autocomplete="off" />
+                    <small style="font-size:11px; color:var(--muted);">Install Ollama from <strong>ollama.com</strong>, then run e.g. <code>ollama pull llama3.2</code>.</small>
                 </div>
                 <button class="btn btn-secondary" id="setTestKeyBtn">Test connection</button>
             </div>
@@ -3530,6 +3545,7 @@
     const SETTINGS_KEY = 'ct-settings-v1';
     const DEFAULT_SETTINGS = {
         provider: 'none', model: 'gpt-4o-mini', apiKey: '',
+        ollamaUrl: 'http://localhost:11434',
         wordTarget: 0, font: 'default',
         autosave: true, lockQuotes: true,
         customRules: [],
@@ -3590,16 +3606,34 @@
 
     /* ---------- Settings modal wiring ---------- */
     const settingsModal = document.getElementById('settingsModal');
+    const PROVIDER_META = {
+        none:       { signup: null,                                                  blurb: 'No API calls. Paraphrase uses the offline mock dictionary.' },
+        groq:       { signup: 'https://console.groq.com/keys',                       blurb: 'Free · 30 RPM · ~14,400 RPD. Fastest free option.' },
+        cerebras:   { signup: 'https://cloud.cerebras.ai/?redirect=/platform/api-keys', blurb: 'Free · 30 RPM · 1M TPM. Same model as Groq, different infra.' },
+        openrouter: { signup: 'https://openrouter.ai/keys',                          blurb: 'Free models marked with :free. Multiple models, one key.' },
+        gemini:     { signup: 'https://aistudio.google.com/app/apikey',              blurb: 'Free · 30 RPM · 1,500 RPD on flash-lite. Google account needed.' },
+        openai:     { signup: 'https://platform.openai.com/api-keys',                blurb: 'Pay-as-you-go. ~$0.15/1M input tokens. New accounts get $5 credit.' },
+        anthropic:  { signup: 'https://console.anthropic.com/settings/keys',         blurb: 'Pay-as-you-go. Direct browser access uses beta header.' },
+        ollama:     { signup: 'https://ollama.com/download',                         blurb: 'Local · no key needed · install Ollama, then pull a model.' }
+    };
+
     function refreshModelHint() {
-        const prov = document.getElementById('setProvider').value;
-        const hint = document.getElementById('setModelHint');
-        if (!hint) return;
-        if (prov === 'none') hint.textContent = 'No API calls will be made. Paraphrase uses the offline mock dictionary.';
-        else hint.innerHTML = `Will use <strong>${defaultModelFor(prov)}</strong> automatically. Cheap, fast, plenty good for paraphrase.`;
+        const prov  = document.getElementById('setProvider').value;
+        const hint  = document.getElementById('setModelHint');
+        const meta  = PROVIDER_META[prov] || PROVIDER_META.none;
+        const model = defaultModelFor(prov);
+        const signup = meta.signup ? ` <a href="${meta.signup}" target="_blank" rel="noopener" style="color:var(--accent-2);">Get a key →</a>` : '';
+        if (prov === 'none')        hint.innerHTML = meta.blurb;
+        else if (prov === 'ollama') hint.innerHTML = `Default model <strong>${model}</strong>. ${meta.blurb}${signup}`;
+        else                        hint.innerHTML = `Default model <strong>${model}</strong>. ${meta.blurb}${signup}`;
+        // Toggle the API key field vs Ollama URL field
+        document.getElementById('apiKeyField').style.display    = (prov === 'ollama' || prov === 'none') ? 'none' : '';
+        document.getElementById('ollamaUrlField').style.display = (prov === 'ollama') ? '' : 'none';
     }
     function openSettings() {
         document.getElementById('setProvider').value = settings.provider;
         document.getElementById('setApiKey').value   = settings.apiKey || '';
+        document.getElementById('setOllamaUrl').value = settings.ollamaUrl || 'http://localhost:11434';
         document.getElementById('setWordTarget').value = settings.wordTarget || '';
         document.getElementById('setFont').value     = settings.font;
         document.getElementById('setAutosave').classList.toggle('on', settings.autosave);
@@ -3631,8 +3665,9 @@
 
     document.getElementById('setSaveBtn').addEventListener('click', () => {
         settings.provider   = document.getElementById('setProvider').value;
-        settings.model      = defaultModelFor(settings.provider);  // auto-resolve, no manual field
+        settings.model      = defaultModelFor(settings.provider);
         settings.apiKey     = document.getElementById('setApiKey').value.trim();
+        settings.ollamaUrl  = document.getElementById('setOllamaUrl').value.trim() || 'http://localhost:11434';
         settings.wordTarget = parseInt(document.getElementById('setWordTarget').value || '0', 10) || 0;
         settings.font       = document.getElementById('setFont').value;
         settings.autosave   = document.getElementById('setAutosave').classList.contains('on');
@@ -3656,6 +3691,13 @@
     /** Map a raw LLM error into a short, user-friendly toast message. */
     function explainLLMError(err, provider) {
         const m = (err.message || '').toLowerCase();
+        // Ollama-specific: most errors here are "is it running?" + CORS
+        if (provider === 'ollama') {
+            if (m.includes('failed to fetch') || m.includes('networkerror') || m.includes('load failed'))
+                return 'Cannot reach Ollama. Make sure it is running (ollama serve) and that OLLAMA_ORIGINS allows ' + location.origin + ' for CORS.';
+            if (m.includes('model') && (m.includes('not found') || m.includes('pull')))
+                return 'Model not pulled. Run: ollama pull ' + defaultModelFor(provider);
+        }
         if (err.status === 401 || m.includes('unauthorized') || m.includes('invalid api key') || m.includes('incorrect api'))
             return 'Invalid API key. Double-check it was pasted correctly.';
         if (err.status === 403 || m.includes('forbidden') || m.includes('permission'))
@@ -3663,6 +3705,8 @@
         if (err.status === 429 || m.includes('quota') || m.includes('rate limit')) {
             if (provider === 'gemini')
                 return 'Hit your Gemini free-tier quota. Wait a minute (RPM resets) or until midnight Pacific (RPD resets), or enable billing at aistudio.google.com/app/apikey.';
+            if (provider === 'groq' || provider === 'cerebras' || provider === 'openrouter')
+                return `Hit ${provider}'s free-tier rate limit. Wait ~60s or switch to another free provider.`;
             return 'Rate limit / quota hit. Wait a moment or upgrade your plan.';
         }
         if (m.includes('not found') || m.includes('is not supported'))
@@ -3673,7 +3717,13 @@
     document.getElementById('setTestKeyBtn').addEventListener('click', async () => {
         const prov = document.getElementById('setProvider').value;
         const key  = document.getElementById('setApiKey').value.trim();
-        if (prov === 'none' || !key) { toast('Select a provider and enter an API key.', 'warning'); return; }
+        if (prov === 'none') { toast('Pick a provider first.', 'warning'); return; }
+        if (prov !== 'ollama' && !key) { toast('Enter an API key for this provider.', 'warning'); return; }
+        // Temporarily stash Ollama URL so callLLM picks it up
+        const oldOllamaUrl = settings.ollamaUrl;
+        if (prov === 'ollama') {
+            settings.ollamaUrl = document.getElementById('setOllamaUrl').value.trim() || 'http://localhost:11434';
+        }
         const model = defaultModelFor(prov);
         toast('Testing connection…', 'info', 1500);
         try {
@@ -3682,6 +3732,8 @@
         } catch (err) {
             console.error(err);
             toast(explainLLMError(err, prov), 'error', 8000);
+        } finally {
+            if (prov === 'ollama') settings.ollamaUrl = oldOllamaUrl;
         }
     });
 
@@ -4273,38 +4325,58 @@
        BYO API key — real LLM paraphrase/humanize fallback
        ================================================================ */
     function defaultModelFor(p) {
-        // Chosen for the most generous free-tier quotas as of 2026.
-        // gemini-2.0-flash-lite: 30 RPM, 1,500 RPD on free tier (vs 2.5-flash's 20 RPD).
         return ({
-            openai:    'gpt-4o-mini',
-            gemini:    'gemini-2.0-flash-lite',
-            anthropic: 'claude-haiku-4-5'
+            openai:     'gpt-4o-mini',
+            gemini:     'gemini-2.0-flash-lite',
+            anthropic:  'claude-haiku-4-5',
+            groq:       'llama-3.3-70b-versatile',
+            cerebras:   'llama-3.3-70b',
+            openrouter: 'meta-llama/llama-3.3-70b-instruct:free',
+            ollama:     'llama3.2'
         })[p] || '';
     }
-    // Fallback chain when a model name is rejected. Ordered from "most generous
-    // free quota" downward, so a 404 on the primary doesn't dump us into the
-    // 20-RPD ditch that is plain gemini-2.5-flash.
+    // Fallback chain — ordered "most generous free quota" first.
     const MODEL_FALLBACKS = {
         gemini:    [
-            'gemini-2.0-flash-lite',   // primary — 30 RPM, 1500 RPD
+            'gemini-2.0-flash-lite',   // 30 RPM, 1500 RPD on free tier
             'gemini-2.5-flash-lite',   // 15 RPM, 1000 RPD
             'gemini-2.0-flash',        // 15 RPM, 1500 RPD
-            'gemini-1.5-flash-latest', // legacy fallback
-            'gemini-2.5-flash'         // last resort — only 20 RPD on free tier
+            'gemini-1.5-flash-latest',
+            'gemini-2.5-flash'         // 20 RPD only — last resort
         ],
         openai:    ['gpt-4o-mini', 'gpt-4.1-mini', 'gpt-3.5-turbo'],
-        anthropic: ['claude-haiku-4-5', 'claude-3-5-haiku-latest', 'claude-3-haiku-20240307']
+        anthropic: ['claude-haiku-4-5', 'claude-3-5-haiku-latest', 'claude-3-haiku-20240307'],
+        groq:      ['llama-3.3-70b-versatile', 'llama-3.1-70b-versatile', 'llama-3.1-8b-instant', 'mixtral-8x7b-32768'],
+        cerebras:  ['llama-3.3-70b', 'llama3.1-70b', 'llama3.1-8b'],
+        openrouter:['meta-llama/llama-3.3-70b-instruct:free', 'meta-llama/llama-3.2-3b-instruct:free', 'mistralai/mistral-7b-instruct:free', 'google/gemma-2-9b-it:free'],
+        ollama:    ['llama3.2', 'llama3.1', 'qwen2.5', 'mistral', 'gemma2']
+    };
+
+    // OpenAI-compatible providers all use the same request shape; only the base URL differs.
+    const OPENAI_COMPAT = {
+        openai:     'https://api.openai.com/v1/chat/completions',
+        groq:       'https://api.groq.com/openai/v1/chat/completions',
+        cerebras:   'https://api.cerebras.ai/v1/chat/completions',
+        openrouter: 'https://openrouter.ai/api/v1/chat/completions'
     };
     /** Single-model API call. Throws on non-2xx with the body as the message. */
     async function callLLMOnce(prompt, provider, key, model) {
-        if (provider === 'openai') {
-            const r = await fetch('https://api.openai.com/v1/chat/completions', {
+        // OpenAI-compatible: OpenAI, Groq, Cerebras, OpenRouter
+        if (OPENAI_COMPAT[provider]) {
+            const headers = { 'Content-Type':'application/json', 'Authorization': 'Bearer ' + key };
+            // OpenRouter likes referrer + title for the leaderboard / abuse signals.
+            if (provider === 'openrouter') {
+                headers['HTTP-Referer'] = location.origin;
+                headers['X-Title']      = 'Copy Tool';
+            }
+            const r = await fetch(OPENAI_COMPAT[provider], {
                 method: 'POST',
-                headers: { 'Content-Type':'application/json', 'Authorization': 'Bearer ' + key },
+                headers,
                 body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], temperature: 0.7 })
             });
             if (!r.ok) { const t = await r.text(); const err = new Error(t.slice(0, 300)); err.status = r.status; throw err; }
-            const j = await r.json(); return j.choices[0].message.content.trim();
+            const j = await r.json();
+            return (j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content || '').trim();
         }
         if (provider === 'gemini') {
             const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(key)}`, {
@@ -4325,6 +4397,17 @@
             if (!r.ok) { const t = await r.text(); const err = new Error(t.slice(0, 300)); err.status = r.status; throw err; }
             const j = await r.json();
             return (j.content && j.content[0].text || '').trim();
+        }
+        if (provider === 'ollama') {
+            const base = (settings.ollamaUrl || 'http://localhost:11434').replace(/\/$/, '');
+            const r = await fetch(base + '/api/chat', {
+                method: 'POST',
+                headers: { 'Content-Type':'application/json' },
+                body: JSON.stringify({ model, messages: [{ role: 'user', content: prompt }], stream: false })
+            });
+            if (!r.ok) { const t = await r.text(); const err = new Error(t.slice(0, 300)); err.status = r.status; throw err; }
+            const j = await r.json();
+            return (j.message && j.message.content || '').trim();
         }
         throw new Error('Unknown provider: ' + provider);
     }
@@ -4356,10 +4439,17 @@
         throw lastErr || new Error('All model fallbacks exhausted.');
     }
 
+    /** A real LLM is configured iff provider is set AND (it's Ollama OR an API key exists). */
+    function llmConfigured() {
+        if (settings.provider === 'none') return false;
+        if (settings.provider === 'ollama') return true;
+        return !!settings.apiKey;
+    }
+
     // Override paraphraseText to use the real API when configured
     const _mockParaphraseText = paraphraseText;
     paraphraseText = async function(text, style='standard') {
-        if (settings.provider !== 'none' && settings.apiKey) {
+        if (llmConfigured()) {
             try {
                 const prompt = `Paraphrase the following text in a ${style} style. Preserve meaning. Output only the rewritten text, no preamble.\n\n"""${text}"""`;
                 return await callLLM(prompt, settings);
