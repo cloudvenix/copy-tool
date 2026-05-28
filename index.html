@@ -608,8 +608,11 @@
         display: flex;
         flex-direction: column;
         overflow: hidden;
+        min-height: 0;
         transition: background 0.4s var(--ease);
     }
+    .sidebar-right .side-tabs { flex: 0 0 auto; }
+    .sidebar-right .cta       { flex: 0 0 auto; }
     .sidebar-right .top {
         padding: 14px 16px;
         border-bottom: 1px solid var(--border);
@@ -634,10 +637,10 @@
         flex: 1;
         min-height: 0;
         overflow-y: auto;
-        padding: 12px;
+        padding: 10px;
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 6px;
     }
 
     .module {
@@ -649,10 +652,10 @@
     }
     .module:hover { border-color: var(--border-2); }
     .module-head {
-        padding: 12px 14px;
+        padding: 9px 12px;
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 9px;
         cursor: pointer;
         user-select: none;
     }
@@ -686,7 +689,7 @@
     .module.open .module-head .chev { transform: rotate(180deg); }
 
     .module-body {
-        padding: 0 14px 14px;
+        padding: 0 12px 12px;
         border-top: 1px solid var(--border);
         margin-top: -1px;
         max-height: 0;
@@ -695,9 +698,9 @@
         transition: max-height 0.3s var(--ease), opacity 0.2s var(--ease), padding 0.3s var(--ease);
     }
     .module.open .module-body {
-        max-height: 800px;
+        max-height: 1200px;
         opacity: 1;
-        padding: 12px 14px 14px;
+        padding: 10px 12px 12px;
     }
 
     .module-body label {
@@ -1464,28 +1467,42 @@
         background: var(--accent);
         border-radius: 2px;
     }
-    .side-panel { display: none; flex: 1; min-height: 0; flex-direction: column; }
+    .side-panel {
+        display: none;
+        flex: 1 1 0;
+        min-height: 0;
+        min-width: 0;
+        flex-direction: column;
+        overflow: hidden;
+    }
     .side-panel.active { display: flex; }
+    .side-panel .module-list {
+        flex: 1 1 0;
+        min-height: 0;
+        overflow-y: auto;
+        scroll-behavior: smooth;
+        overscroll-behavior: contain;
+    }
 
     /* Analyze rows */
     .analyze-card {
         background: var(--panel);
         border: 1px solid var(--border);
         border-radius: var(--radius);
-        padding: 12px 14px;
-        margin-bottom: 8px;
+        padding: 10px 12px;
+        margin-bottom: 6px;
     }
     .analyze-card h4 {
-        font-size: 11px;
+        font-size: 10.5px;
         text-transform: uppercase;
         letter-spacing: 0.5px;
         color: var(--muted);
-        margin-bottom: 8px;
+        margin-bottom: 6px;
         font-weight: 600;
         display: flex; align-items: center; justify-content: space-between;
     }
     .big-score {
-        font-size: 26px;
+        font-size: 22px;
         font-weight: 700;
         letter-spacing: -0.02em;
         font-variant-numeric: tabular-nums;
@@ -1495,13 +1512,13 @@
     .grade-grid {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
-        gap: 6px;
-        font-size: 12px;
+        gap: 4px;
+        font-size: 11.5px;
     }
     .grade-grid .item {
         background: var(--panel-2);
-        padding: 6px 8px;
-        border-radius: 6px;
+        padding: 4px 7px;
+        border-radius: 5px;
         border: 1px solid var(--border);
         display: flex;
         justify-content: space-between;
@@ -1512,9 +1529,9 @@
         color: var(--accent-2);
     }
     .histogram {
-        display: flex; align-items: flex-end; gap: 4px;
-        height: 60px;
-        padding-top: 6px;
+        display: flex; align-items: flex-end; gap: 3px;
+        height: 44px;
+        padding-top: 4px;
     }
     .histogram .bar {
         flex: 1;
@@ -1883,27 +1900,41 @@
             <div class="side-panel active" data-side-panel="tools">
             <div class="module-list" id="moduleList">
 
+                <!-- How-to banner -->
+                <div id="howToBanner" style="background:linear-gradient(135deg, rgba(139,92,246,0.14), rgba(167,139,250,0.06)); border:1px solid var(--border); border-radius:10px; padding:10px 12px; font-size:11.5px; color:var(--text-2); line-height:1.55; margin-bottom:6px; cursor:pointer;" title="Click to open Settings">
+                    <strong style="color:var(--accent-2);">Beating AI detectors:</strong>
+                    Typos don't help (detectors ignore them). Use <strong>Humanize</strong> + <strong>Paraphrase</strong>.
+                    For real rewrites that beat strong detectors,
+                    add an <strong>OpenAI / Gemini API key</strong> in
+                    <span style="text-decoration:underline; color:var(--accent-2);">Settings → AI provider</span>.
+                </div>
+
                 <!-- Imperfections -->
-                <div class="module open" data-module="imperfections">
+                <div class="module" data-module="imperfections">
                     <div class="module-head">
                         <span class="pill">~</span>
                         <div class="title">Organic Imperfection
-                            <div class="sub">Capitalization, articles, transposition</div>
+                            <div class="sub">Adds typos &amp; noise — off by default</div>
                         </div>
                         <span class="chev">▾</span>
                     </div>
                     <div class="module-body">
+                        <div style="font-size:11px; color:var(--warning); background:rgba(251,191,36,0.08); border-left:2px solid var(--warning); padding:8px 10px; border-radius:5px; margin-bottom:10px; line-height:1.5;">
+                            <strong>Warning:</strong> Modern AI detectors look at sentence
+                            structure and word choice, not surface typos.
+                            Enabling these can <em>hurt</em> your text. Use Humanize for AI-detection evasion.
+                        </div>
                         <div class="row">
                             <label for="intensity">Intensity</label>
                             <div class="slider-wrap">
-                                <input type="range" id="intensity" min="1" max="100" value="10" />
-                                <span class="slider-value" id="intensityValue">10</span>
+                                <input type="range" id="intensity" min="0" max="100" value="0" />
+                                <span class="slider-value" id="intensityValue">0</span>
                             </div>
                         </div>
                         <div class="checkbox-group">
-                            <label><input type="checkbox" id="capVariance" checked /> Capitalization variance</label>
-                            <label><input type="checkbox" id="articleSwap" checked /> Article swapping (a / an / the)</label>
-                            <label><input type="checkbox" id="transposition" checked /> Letter transposition</label>
+                            <label><input type="checkbox" id="capVariance" /> Capitalization variance</label>
+                            <label><input type="checkbox" id="articleSwap" /> Article swapping (a / an / the)</label>
+                            <label><input type="checkbox" id="transposition" /> Letter transposition (creates typos)</label>
                             <label><input type="checkbox" id="punctuationDrift" /> Punctuation drift</label>
                             <label><input type="checkbox" id="doubleSpace" /> Random double-space</label>
                         </div>
@@ -1913,7 +1944,7 @@
                 </div>
 
                 <!-- Paraphrase -->
-                <div class="module" data-module="paraphrase">
+                <div class="module open" data-module="paraphrase">
                     <div class="module-head">
                         <span class="pill">≈</span>
                         <div class="title">Paraphrase
@@ -1935,7 +1966,7 @@
                 </div>
 
                 <!-- HUMANIZE (NEW) -->
-                <div class="module" data-module="humanize">
+                <div class="module open" data-module="humanize">
                     <div class="module-head">
                         <span class="pill">★</span>
                         <div class="title">Humanize
@@ -2349,69 +2380,93 @@
     };
 
     /* ============ AI-FINGERPRINT PHRASES (humanizer) ============
-       Mapped to natural human-ish replacements. */
+       Mapped to natural human-ish replacements. Empty value = delete. */
     const AI_PHRASES = {
-        // Common AI buzzwords
-        'delve into':           'look at',
-        'delve':                'look',
-        'delves':               'looks',
-        'tapestry of':          'mix of',
-        'a rich tapestry':      'a mix',
-        'tapestry':             'mix',
-        'navigate the landscape': 'deal with',
-        'in the realm of':      'in',
-        'in the world of':      'in',
-        'myriad of':            'many',
-        'a myriad of':          'many',
-        'a plethora of':        'many',
-        'plethora':             'lots',
-        'embark on':            'start',
-        'embark upon':          'start',
-        'leveraging':           'using',
-        'leverage':             'use',
-        'utilizes':             'uses',
-        'utilizing':            'using',
-        'underscores':          'shows',
-        'underscore':           'show',
-        'showcase':             'show',
-        'showcasing':           'showing',
-        'showcases':            'shows',
-        'elucidate':            'explain',
-        'elucidating':          'explaining',
-        'synergy':              'teamwork',
-        'paradigm shift':       'big change',
-        'paradigm':             'model',
-        'holistic':             'overall',
-        'robust':               'strong',
-        'comprehensive':        'complete',
-        'meticulously':         'carefully',
-        'intricate':            'complex',
-        'pivotal':              'key',
-        'multifaceted':         'many-sided',
-        'in essence':           'basically',
-        'it is important to note that': '',
-        "it's important to note that":  '',
-        'it is worth noting that':      '',
-        "it's worth noting that":       '',
-        'it should be noted that':      '',
-        'needless to say,':     '',
-        'as such,':             'so,',
-        'as a result,':         'so,',
-        'consequently,':        'so,',
-        'furthermore,':         'also,',
-        'moreover,':            'also,',
-        'in conclusion,':       'so,',
-        'to summarize,':        'in short,',
-        'in summary,':          'in short,',
-        'in order to':          'to',
-        'due to the fact that': 'because',
-        'at this point in time': 'now',
-        'a large number of':    'many',
-        'in the event that':    'if',
-        'on the other hand,':   'but,',
-        'with regard to':       'about',
-        'in terms of':          'for',
-        'first and foremost':   'first'
+        // Top AI buzzwords
+        'delve into':'look at','delve':'look','delves':'looks','delving':'looking',
+        'tapestry of':'mix of','a rich tapestry':'a mix','tapestry':'mix',
+        'navigate the landscape':'deal with','navigate the complex landscape':'deal with',
+        'navigate the complexities':'work through','navigating':'working through',
+        'in the realm of':'in','in the world of':'in','within the realm of':'in',
+        'myriad of':'many','a myriad of':'many','a plethora of':'many','plethora':'lots',
+        'embark on':'start','embark upon':'start','embarking on':'starting',
+        'leveraging':'using','leverage':'use','leveraged':'used',
+        'utilizes':'uses','utilizing':'using','utilization':'use',
+        'underscores':'shows','underscore':'show','underscoring':'showing',
+        'showcase':'show','showcasing':'showing','showcases':'shows',
+        'elucidate':'explain','elucidating':'explaining','elucidates':'explains',
+        'synergy':'teamwork','synergistic':'combined',
+        'paradigm shift':'big change','paradigm':'model','paradigms':'models',
+        'holistic':'overall','holistically':'overall',
+        'robust':'strong','robustness':'strength',
+        'comprehensive':'complete','comprehensively':'fully',
+        'meticulously':'carefully','meticulous':'careful',
+        'intricate':'complex','intricately':'closely','intricacies':'details',
+        'pivotal':'key','pivot':'shift',
+        'multifaceted':'many-sided','multi-faceted':'many-sided',
+        'in essence':'basically','quintessential':'classic','quintessentially':'classically',
+        'profound':'deep','profoundly':'deeply',
+        'unprecedented':'rare','unparalleled':'unmatched','unwavering':'steady',
+        'cutting-edge':'modern','state-of-the-art':'modern','bleeding-edge':'new',
+        'foster':'help','fostering':'helping','foster a':'create a',
+        'streamline':'simplify','streamlined':'simpler','streamlines':'simplifies',
+        'spearhead':'lead','spearheaded':'led',
+        'crucial':'key','crucially':'importantly',
+        'vital':'key','vitally':'really',
+        'integral':'key','integrally':'closely',
+        'noteworthy':'notable','noteworthiness':'importance',
+        'invaluable':'useful','invaluably':'usefully',
+        'in light of':'given','in lieu of':'instead of',
+        'plays a crucial role':'matters','plays a vital role':'matters',
+        'plays a significant role':'matters','plays a key role':'matters',
+        'plays a pivotal role':'matters','plays an important role':'matters',
+        'paramount':'top','utmost':'highest','formidable':'serious',
+        'a testament to':'shows','testament to':'proof of',
+        'realm':'area','endeavor':'effort','endeavors':'efforts',
+        'aforementioned':'above','heretofore':'until now','hitherto':'so far',
+        'plethora of':'lots of','myriad':'lots',
+        'gleaned':'learned','gleaning':'learning',
+        'cornerstone':'basis','linchpin':'key part',
+        // Setup phrases
+        'it is important to note that':'','it is important to note':'',
+        "it's important to note that":'',"it's important to note":'',
+        'it is worth noting that':'',"it's worth noting that":'',
+        'it is worth mentioning that':'','it should be noted that':'',
+        'it is important to understand that':'','it is essential to note that':'',
+        'it is essential to':'','it is crucial to':'',
+        'it is also worth noting that':'',"one must consider":'consider',
+        'needless to say,':'','needless to say':'',
+        // Transitions
+        'as such,':'so,','as a result,':'so,','consequently,':'so,',
+        'furthermore,':'also,','moreover,':'also,','additionally,':'also,',
+        'in addition to that,':'also,','in addition,':'also,',
+        'in conclusion,':'','to conclude,':'','in summary,':'','to summarize,':'',
+        'on the other hand,':'but,','that being said,':'but,','having said that,':'but,',
+        'with that said,':'but,','nonetheless,':'still,','nevertheless,':'still,',
+        'in light of this,':'given this,','given that,':'since',
+        'in order to':'to','so as to':'to',
+        'due to the fact that':'because','owing to the fact that':'because',
+        'on the basis of':'based on','for the purpose of':'to',
+        'at this point in time':'now','at this juncture':'now','at the present time':'now',
+        'a large number of':'many','a great deal of':'a lot of','a significant number of':'many',
+        'in the event that':'if','in cases where':'when','should it be the case that':'if',
+        'with regard to':'about','with respect to':'about','regarding':'about',
+        'in terms of':'for','in relation to':'about',
+        'first and foremost':'first','last but not least':'finally',
+        'by virtue of':'because of','in spite of the fact that':'although',
+        'in the process of':'while','in the course of':'during',
+        // Generic AI tropes
+        'in today\'s world':'today','in today\'s society':'today',
+        'in today\'s digital age':'today','in the modern era':'today',
+        'in the rapidly evolving':'in the fast-changing','rapidly evolving':'fast-changing',
+        'ever-changing':'changing','ever-evolving':'evolving',
+        'world we live in':'world','society we live in':'society',
+        // Mid-sentence redundancy
+        'a wide range of':'many','a wide variety of':'many','a vast array of':'many',
+        'an array of':'many','a host of':'many',
+        // Cybersecurity-specific AI tropes (from the user's domain)
+        'malicious actor':'attacker','malicious actors':'attackers','threat actor':'attacker','threat actors':'attackers',
+        'bad actor':'attacker','bad actors':'attackers'
     };
 
     /* AI-style boilerplate sentence patterns we delete outright */
@@ -3023,8 +3078,36 @@
                 (m, a, conj) => chance(p) ? a + '. ' + conj.charAt(0).toUpperCase() + conj.slice(1) + ' ' : m);
         }
 
-        // 8. Collapse runs of spaces left behind by deletions
-        r = r.replace(/[ \t]{2,}/g, ' ').replace(/\s+([.,!?;:])/g, '$1');
+        // 8. Sentence-opening variation — when 3+ consecutive sentences start
+        // with the same word, soften with a connector or drop the leading article.
+        if (hum_sentenceVary.checked) {
+            const sentences = r.split(/(?<=[.!?])\s+/);
+            const out = [];
+            const ALT = { 'The': ['This', 'A', ''], 'A': ['One', 'Some', ''], 'It': ['This', 'That'], 'This': ['That', 'It'], 'These': ['Those', 'Such'] };
+            let lastFirst = '';
+            for (const s of sentences) {
+                const m = s.match(/^(\W*)(\w+)/);
+                if (m && m[2] === lastFirst && ALT[m[2]]) {
+                    const alt = pickRandom(ALT[m[2]]);
+                    if (alt === '') {
+                        // Delete leading word + space, capitalize new first letter
+                        out.push(s.replace(/^(\W*)\w+\s+(\w)/, (mm, lead, c) => lead + c.toUpperCase()));
+                    } else {
+                        out.push(s.replace(/^(\W*)\w+/, '$1' + alt));
+                    }
+                } else {
+                    out.push(s);
+                }
+                if (m) lastFirst = m[2];
+            }
+            r = out.join(' ');
+        }
+
+        // 9. Collapse runs of spaces left behind by deletions
+        r = r.replace(/[ \t]{2,}/g, ' ')
+             .replace(/\s+([.,!?;:])/g, '$1')
+             .replace(/(^|[.!?]\s+),\s+/g, '$1') // stray comma after deletion of "Furthermore,"
+             .replace(/^\s+/, '');
 
         return r;
     }
@@ -3496,6 +3579,8 @@
     }));
     settingsModal.addEventListener('click', e => { if (e.target === settingsModal) closeSettings(); });
     document.getElementById('settingsBtn').addEventListener('click', openSettings);
+    const howToBanner = document.getElementById('howToBanner');
+    if (howToBanner) howToBanner.addEventListener('click', openSettings);
 
     // Switch toggles
     document.querySelectorAll('.switch').forEach(sw => {
@@ -4026,7 +4111,10 @@
     /* ================================================================
        QUOTE LOCK + CUSTOM RULES (extends humanizeText)
        ================================================================ */
-    const PROTECTED_RE = /(['"“”‘’][^'"“”‘’]{1,200}['"“”‘’]|\[[0-9, ]+\]|\([^)]*?\b\d{4}\b[^)]*?\))/g;
+    // Lock: double-quoted runs, bracketed citations like [1] or [2, 3], and
+    // parenthetical references with a 4-digit year. Apostrophes excluded so
+    // contractions and possessives aren't mistakenly captured.
+    const PROTECTED_RE = /(["“”][^"“”]{1,200}["“”]|\[[0-9, ]+\]|\([^)]*?\b\d{4}\b[^)]*?\))/g;
     function withQuoteLock(text, fn) {
         if (!settings.lockQuotes) return fn(text);
         const parts = []; let lastIdx = 0; let m;
