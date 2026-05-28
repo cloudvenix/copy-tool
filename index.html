@@ -1774,11 +1774,11 @@
 
             <div class="sidebar-spacer"></div>
 
-            <div class="profile-card">
-                <div class="avatar" id="avatarInitials">CV</div>
+            <div class="profile-card" id="profileCard" title="Click to edit in Settings" style="cursor:pointer;">
+                <div class="avatar" id="avatarInitials">U</div>
                 <div class="info">
-                    <div class="name" id="profileName">cloudvenix</div>
-                    <div class="sub" id="profileEmail">arbazzqureshi@outlook.com</div>
+                    <div class="name" id="profileName">Local user</div>
+                    <div class="sub" id="profileEmail">Saved in this browser</div>
                 </div>
                 <span class="tag">Free</span>
             </div>
@@ -2185,25 +2185,20 @@
                     Set an API key to use a real LLM for Paraphrase and Humanize.
                     Without a key, the mock heuristics are used. Keys are stored only in your browser's localStorage.
                 </p>
-                <div class="row-2">
-                    <div class="field">
-                        <label>Provider</label>
-                        <select id="setProvider">
-                            <option value="none">— Mock (no API) —</option>
-                            <option value="openai">OpenAI</option>
-                            <option value="gemini">Google Gemini</option>
-                            <option value="anthropic">Anthropic (browser beta)</option>
-                        </select>
-                    </div>
-                    <div class="field">
-                        <label>Model</label>
-                        <input type="text" id="setModel" placeholder="gpt-4o-mini" />
-                    </div>
+                <div class="field">
+                    <label>Provider</label>
+                    <select id="setProvider">
+                        <option value="none">— Mock (no API) —</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="gemini">Google Gemini</option>
+                        <option value="anthropic">Anthropic (browser beta)</option>
+                    </select>
+                    <div id="setModelHint" style="font-size:11px; color:var(--muted); margin-top:6px;"></div>
                 </div>
                 <div class="field">
                     <label>API key</label>
-                    <input type="password" id="setApiKey" placeholder="sk-…" autocomplete="off" />
-                    <small class="warn">⚠ Keys are stored in localStorage. Don't use on shared machines.</small>
+                    <input type="password" id="setApiKey" placeholder="paste your key here" autocomplete="off" />
+                    <small class="warn">⚠ Stored in your browser's localStorage. Don't use on shared machines.</small>
                 </div>
                 <button class="btn btn-secondary" id="setTestKeyBtn">Test connection</button>
             </div>
@@ -2236,6 +2231,23 @@
                         <div class="desc">Skip "…" and [N] / (Author, 2023) when humanizing.</div>
                     </div>
                     <div class="switch on" id="setLockQuotes"></div>
+                </div>
+            </div>
+
+            <div class="section">
+                <h3>Profile</h3>
+                <p class="description" style="margin-bottom:10px;">
+                    Shown only on the sidebar card. Stored locally; nothing is sent anywhere.
+                </p>
+                <div class="row-2">
+                    <div class="field">
+                        <label>Display name</label>
+                        <input type="text" id="setProfileName" placeholder="(optional)" autocomplete="off" />
+                    </div>
+                    <div class="field">
+                        <label>Email</label>
+                        <input type="email" id="setProfileEmail" placeholder="(optional)" autocomplete="off" />
+                    </div>
                 </div>
             </div>
 
@@ -3521,7 +3533,8 @@
         wordTarget: 0, font: 'default',
         autosave: true, lockQuotes: true,
         customRules: [],
-        customRecipes: []
+        customRecipes: [],
+        profile: { name: '', email: '' }
     };
     let settings = { ...DEFAULT_SETTINGS };
     try {
@@ -3542,7 +3555,25 @@
         const tw = document.getElementById('targetWrap');
         tw.style.display = settings.wordTarget > 0 ? 'inline-flex' : 'none';
         updateTargetRing();
+        applyProfileToCard();
     }
+
+    function applyProfileToCard() {
+        const name  = (settings.profile && settings.profile.name)  || '';
+        const email = (settings.profile && settings.profile.email) || '';
+        const nameEl  = document.getElementById('profileName');
+        const emailEl = document.getElementById('profileEmail');
+        const initEl  = document.getElementById('avatarInitials');
+        nameEl.textContent  = name  || 'Local user';
+        emailEl.textContent = email || 'Saved in this browser';
+        // Compute initials: first letter of each word in name, up to 2; fallback to email or "U"
+        const src = name || email || 'User';
+        const parts = src.replace(/[^A-Za-z0-9 ]/g, ' ').trim().split(/\s+/);
+        const initials = parts.length >= 2 ? (parts[0][0] + parts[1][0]) : (parts[0].slice(0, 2));
+        initEl.textContent = initials.toUpperCase();
+    }
+    // Clicking the profile card opens Settings
+    document.getElementById('profileCard').addEventListener('click', () => openSettings());
     function updateTargetRing() {
         if (settings.wordTarget <= 0) return;
         const words = parseInt(statWords.textContent.replace(/,/g, ''), 10) || 0;
@@ -3559,17 +3590,28 @@
 
     /* ---------- Settings modal wiring ---------- */
     const settingsModal = document.getElementById('settingsModal');
+    function refreshModelHint() {
+        const prov = document.getElementById('setProvider').value;
+        const hint = document.getElementById('setModelHint');
+        if (!hint) return;
+        if (prov === 'none') hint.textContent = 'No API calls will be made. Paraphrase uses the offline mock dictionary.';
+        else hint.innerHTML = `Will use <strong>${defaultModelFor(prov)}</strong> automatically. Cheap, fast, plenty good for paraphrase.`;
+    }
     function openSettings() {
         document.getElementById('setProvider').value = settings.provider;
-        document.getElementById('setModel').value    = settings.model || '';
         document.getElementById('setApiKey').value   = settings.apiKey || '';
         document.getElementById('setWordTarget').value = settings.wordTarget || '';
         document.getElementById('setFont').value     = settings.font;
         document.getElementById('setAutosave').classList.toggle('on', settings.autosave);
         document.getElementById('setLockQuotes').classList.toggle('on', settings.lockQuotes);
+        document.getElementById('setProfileName').value  = (settings.profile && settings.profile.name)  || '';
+        document.getElementById('setProfileEmail').value = (settings.profile && settings.profile.email) || '';
+        refreshModelHint();
         renderRules();
         settingsModal.classList.add('show');
     }
+    // Live-update hint when provider changes
+    document.getElementById('setProvider').addEventListener('change', refreshModelHint);
     function closeSettings() { settingsModal.classList.remove('show'); }
     document.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', () => {
         const which = b.dataset.close;
@@ -3589,14 +3631,19 @@
 
     document.getElementById('setSaveBtn').addEventListener('click', () => {
         settings.provider   = document.getElementById('setProvider').value;
-        settings.model      = document.getElementById('setModel').value.trim();
+        settings.model      = defaultModelFor(settings.provider);  // auto-resolve, no manual field
         settings.apiKey     = document.getElementById('setApiKey').value.trim();
         settings.wordTarget = parseInt(document.getElementById('setWordTarget').value || '0', 10) || 0;
         settings.font       = document.getElementById('setFont').value;
         settings.autosave   = document.getElementById('setAutosave').classList.contains('on');
         settings.lockQuotes = document.getElementById('setLockQuotes').classList.contains('on');
         settings.customRules = collectRulesFromUI();
+        settings.profile    = {
+            name:  document.getElementById('setProfileName').value.trim(),
+            email: document.getElementById('setProfileEmail').value.trim()
+        };
         saveSettings();
+        applyProfileToCard();
         closeSettings();
         toast('Settings saved.', 'success');
     });
@@ -3609,13 +3656,13 @@
     document.getElementById('setTestKeyBtn').addEventListener('click', async () => {
         const prov = document.getElementById('setProvider').value;
         const key  = document.getElementById('setApiKey').value.trim();
-        const model = document.getElementById('setModel').value.trim() || defaultModelFor(prov);
-        if (prov === 'none' || !key) { toast('Select a provider and enter a key.', 'warning'); return; }
+        if (prov === 'none' || !key) { toast('Select a provider and enter an API key.', 'warning'); return; }
+        const model = defaultModelFor(prov);
         toast('Testing connection…', 'info', 1500);
         try {
             const out = await callLLM('Say hello in 3 words.', { provider: prov, apiKey: key, model });
-            toast(`OK: ${out.slice(0, 60)}…`, 'success');
-        } catch (err) { toast('Failed: ' + err.message, 'error', 6000); }
+            toast(`OK (${model}): ${out.slice(0, 50)}…`, 'success', 5000);
+        } catch (err) { toast('Failed: ' + err.message, 'error', 7000); }
     });
 
     /* ---------- Phrase rules editor ---------- */
