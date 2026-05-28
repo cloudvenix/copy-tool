@@ -1,25 +1,21 @@
 <!DOCTYPE html>
-<html lang="en" data-theme="light">
+<html lang="en" data-theme="dark">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Text Variation &amp; Readability Editor</title>
+    <title>Copy Tool — Text Variation &amp; Humanizer</title>
 
-    <!-- mammoth.js: parses .docx to HTML in the browser -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
-    <!-- html-docx-js: converts HTML back into a .docx Blob for download -->
     <script src="https://unpkg.com/html-docx-js/dist/html-docx.js"></script>
-    <!-- FileSaver.js: cross-browser saveAs() -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 
     <style>
-    /* =========================================================
-       UI inspired by Emil Kowalski (emilkowal.ski):
-       - Spring easing: cubic-bezier(0.32, 0.72, 0, 1)
-       - Micro-interactions on every hover/active
-       - Subtle motion, never gratuitous
-       - Sonner-style toasts in the bottom-right
-       ========================================================= */
+    /* ============================================================
+       Copy Tool — design inspired by the Brainwave dashboard
+       (three-column rounded shell, dark by default, accent purple).
+       Motion language: Emil Kowalski — spring easing, micro-interactions.
+       ============================================================ */
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -27,330 +23,437 @@
         --ease:     cubic-bezier(0.32, 0.72, 0, 1);
         --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
-        --bg:        #f6f7f9;
-        --panel:     #ffffff;
-        --panel-2:   #fafbfc;
-        --border:    #e5e7eb;
-        --border-2:  #d1d5db;
-        --accent:    #4f46e5;
-        --accent-2:  #6366f1;
-        --accent-hover: #4338ca;
-        --text:      #0f172a;
-        --muted:     #64748b;
-        --danger:    #dc2626;
-        --success:   #16a34a;
-        --warning:   #f59e0b;
-        --highlight: #fde68a;
-        --complex:   #fca5a5;
-        --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.05);
-        --shadow:    0 4px 12px rgba(15, 23, 42, 0.08);
-        --shadow-lg: 0 20px 40px rgba(15, 23, 42, 0.12);
-        --ring:      0 0 0 3px rgba(79, 70, 229, 0.2);
+        /* Dark theme is the primary look */
+        --page-bg:   #2a2c33;
+        --app-bg:    #0e0f12;
+        --panel:     #16181d;
+        --panel-2:   #1b1e24;
+        --panel-3:   #21242b;
+        --border:    #262932;
+        --border-2:  #353a45;
+        --text:      #e7e9ee;
+        --text-2:    #c4c7cf;
+        --muted:     #8a8e98;
+        --muted-2:   #6b6f78;
+        --accent:    #8b5cf6;
+        --accent-2:  #a78bfa;
+        --accent-hover: #7c3aed;
+        --accent-bg: rgba(139, 92, 246, 0.15);
+        --success:   #4ade80;
+        --danger:    #f87171;
+        --warning:   #fbbf24;
+        --highlight: rgba(251, 191, 36, 0.35);
+        --complex:   rgba(248, 113, 113, 0.25);
+        --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+        --shadow:    0 8px 24px rgba(0,0,0,0.4);
+        --shadow-lg: 0 20px 50px rgba(0,0,0,0.55);
+        --ring:      0 0 0 3px rgba(139, 92, 246, 0.3);
+        --radius-app: 16px;
+        --radius:    10px;
+        --radius-sm: 7px;
     }
 
-    :root[data-theme="dark"] {
-        --bg:        #0b0c10;
-        --panel:     #14161c;
-        --panel-2:   #1a1d24;
-        --border:    #262a33;
-        --border-2:  #353a45;
-        --accent:    #818cf8;
-        --accent-2:  #a5b4fc;
-        --accent-hover: #6366f1;
-        --text:      #e5e7eb;
-        --muted:     #94a3b8;
-        --danger:    #f87171;
-        --success:   #4ade80;
-        --warning:   #fbbf24;
-        --highlight: #b45309;
-        --complex:   #7f1d1d;
-        --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
-        --shadow:    0 4px 16px rgba(0,0,0,0.5);
-        --shadow-lg: 0 20px 50px rgba(0,0,0,0.6);
-        --ring:      0 0 0 3px rgba(129, 140, 248, 0.25);
+    :root[data-theme="light"] {
+        --page-bg:   #d1d5db;
+        --app-bg:    #ffffff;
+        --panel:     #f7f8fa;
+        --panel-2:   #ffffff;
+        --panel-3:   #f1f3f6;
+        --border:    #e5e7eb;
+        --border-2:  #d1d5db;
+        --text:      #111827;
+        --text-2:    #1f2937;
+        --muted:     #6b7280;
+        --muted-2:   #9ca3af;
+        --accent:    #7c3aed;
+        --accent-2:  #8b5cf6;
+        --accent-hover: #6d28d9;
+        --accent-bg: rgba(124, 58, 237, 0.1);
+        --success:   #16a34a;
+        --danger:    #dc2626;
+        --warning:   #d97706;
+        --highlight: rgba(245, 158, 11, 0.35);
+        --complex:   rgba(252, 165, 165, 0.4);
+        --shadow-sm: 0 1px 2px rgba(0,0,0,0.06);
+        --shadow:    0 8px 24px rgba(0,0,0,0.08);
+        --shadow-lg: 0 20px 40px rgba(0,0,0,0.1);
+        --ring:      0 0 0 3px rgba(124, 58, 237, 0.18);
     }
 
     html, body {
         height: 100%;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         color: var(--text);
-        background: var(--bg);
+        background: var(--page-bg);
         font-size: 14px;
         line-height: 1.5;
-        transition: background-color 0.4s var(--ease), color 0.4s var(--ease);
+        transition: background 0.4s var(--ease);
         -webkit-font-smoothing: antialiased;
-    }
-
-    /* ---------- Header ---------- */
-    header {
-        background: var(--panel);
-        border-bottom: 1px solid var(--border);
-        padding: 10px 20px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        box-shadow: var(--shadow-sm);
-        position: sticky;
-        top: 0;
-        z-index: 50;
-        transition: background-color 0.4s var(--ease), border-color 0.4s var(--ease);
-    }
-    header h1 {
-        font-size: 16px;
-        font-weight: 600;
-        letter-spacing: -0.01em;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    header h1::before {
-        content: "";
-        display: inline-block;
-        width: 18px; height: 18px;
-        background: linear-gradient(135deg, var(--accent), var(--accent-2));
-        border-radius: 5px;
-        box-shadow: var(--shadow-sm);
-    }
-    header .actions {
-        display: flex;
-        gap: 6px;
-        align-items: center;
-    }
-
-    /* ---------- Buttons ---------- */
-    .btn {
-        background: var(--accent);
-        color: #fff;
-        border: 1px solid transparent;
-        padding: 7px 12px;
-        border-radius: 7px;
-        font-size: 12.5px;
-        font-weight: 500;
-        cursor: pointer;
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        transition: transform 0.18s var(--ease),
-                    background-color 0.18s var(--ease),
-                    box-shadow 0.18s var(--ease),
-                    opacity 0.18s var(--ease);
-        will-change: transform;
-        white-space: nowrap;
-    }
-    .btn:hover {
-        background: var(--accent-hover);
-        transform: translateY(-1px);
-        box-shadow: var(--shadow);
-    }
-    .btn:active { transform: translateY(0) scale(0.97); }
-    .btn:focus-visible { outline: none; box-shadow: var(--ring); }
-    .btn:disabled { background: var(--border-2); cursor: not-allowed; opacity: 0.6; transform: none; box-shadow: none; }
-
-    .btn-secondary {
-        background: var(--panel);
-        color: var(--text);
-        border: 1px solid var(--border);
-    }
-    .btn-secondary:hover {
-        background: var(--panel-2);
-        border-color: var(--border-2);
-    }
-
-    .btn-ghost {
-        background: transparent;
-        color: var(--muted);
-        padding: 6px 8px;
-    }
-    .btn-ghost:hover {
-        background: var(--panel-2);
-        color: var(--text);
-        transform: none;
-        box-shadow: none;
-    }
-
-    .icon-btn {
-        background: transparent;
-        border: 1px solid transparent;
-        color: var(--muted);
-        width: 32px; height: 32px;
-        border-radius: 7px;
-        display: inline-flex; align-items: center; justify-content: center;
-        cursor: pointer;
-        font-size: 14px;
-        transition: all 0.18s var(--ease);
-    }
-    .icon-btn:hover {
-        background: var(--panel-2);
-        color: var(--text);
-        border-color: var(--border);
-        transform: translateY(-1px);
-    }
-    .icon-btn:active { transform: translateY(0) scale(0.92); }
-    .icon-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
-
-    /* File input styled as button */
-    .file-label {
-        display: inline-flex;
-        align-items: center;
-        gap: 6px;
-        background: var(--accent);
-        color: #fff;
-        padding: 7px 12px;
-        border-radius: 7px;
-        font-size: 12.5px;
-        cursor: pointer;
-        font-weight: 500;
-        transition: all 0.18s var(--ease);
-    }
-    .file-label:hover {
-        background: var(--accent-hover);
-        transform: translateY(-1px);
-        box-shadow: var(--shadow);
-    }
-    .file-label:active { transform: translateY(0) scale(0.97); }
-    #fileInput { display: none; }
-
-    /* Header separator */
-    .sep {
-        width: 1px;
-        height: 20px;
-        background: var(--border);
-        margin: 0 4px;
-    }
-
-    /* ---------- Main two-pane layout ---------- */
-    main {
-        display: flex;
-        height: calc(100vh - 53px);
         overflow: hidden;
     }
 
-    /* Left pane wrapper */
-    .preview-wrap {
+    body {
+        padding: 16px;
+    }
+
+    /* ============================================================
+       APP SHELL — rounded, three columns
+       ============================================================ */
+    .app {
+        height: calc(100vh - 32px);
+        background: var(--app-bg);
+        border-radius: var(--radius-app);
+        display: grid;
+        grid-template-columns: 240px 1fr 340px;
+        overflow: hidden;
+        box-shadow: var(--shadow-lg);
+        transition: background 0.4s var(--ease);
+    }
+
+    /* ============================================================
+       LEFT SIDEBAR
+       ============================================================ */
+    .sidebar-left {
+        background: var(--app-bg);
+        border-right: 1px solid var(--border);
+        display: flex;
+        flex-direction: column;
+        padding: 16px 12px;
+        overflow-y: auto;
+        transition: background 0.4s var(--ease), border-color 0.4s var(--ease);
+    }
+
+    .brand {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 4px 6px 12px;
+        font-size: 17px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+    }
+    .brand-logo {
+        width: 28px; height: 28px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        display: flex; align-items: center; justify-content: center;
+        color: white;
+        font-weight: 700;
+        font-size: 14px;
+        box-shadow: var(--shadow-sm);
+    }
+
+    .nav-main {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+        margin-bottom: 16px;
+    }
+    .nav-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 10px;
+        border-radius: var(--radius-sm);
+        color: var(--text-2);
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.18s var(--ease);
+        background: transparent;
+        border: none;
+        text-align: left;
+        font-weight: 500;
+        position: relative;
+    }
+    .nav-item:hover { background: var(--panel); color: var(--text); }
+    .nav-item.active {
+        background: var(--accent-bg);
+        color: var(--text);
+    }
+    .nav-item.active::before {
+        content: "";
+        position: absolute;
+        left: 0; top: 8px; bottom: 8px;
+        width: 3px;
+        background: var(--accent);
+        border-radius: 0 3px 3px 0;
+    }
+    .nav-item .icon {
+        width: 18px; height: 18px;
+        flex-shrink: 0;
+        opacity: 0.85;
+    }
+    .nav-item .badge {
+        margin-left: auto;
+        background: var(--panel);
+        color: var(--muted);
+        padding: 1px 7px;
+        border-radius: 8px;
+        font-size: 10px;
+        font-weight: 600;
+        font-family: ui-monospace, monospace;
+    }
+    .nav-item.active .badge { background: var(--accent); color: white; }
+    .nav-item .kbd-hint {
+        margin-left: auto;
+        color: var(--muted-2);
+        font-size: 10px;
+        font-family: ui-monospace, monospace;
+    }
+
+    .nav-section-title {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+        color: var(--muted);
+        padding: 12px 10px 6px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .nav-section-title .chev {
+        transition: transform 0.2s var(--ease);
+        color: var(--muted);
+    }
+
+    .doc-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        margin-bottom: 16px;
+    }
+    .doc-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 10px;
+        border-radius: var(--radius-sm);
+        color: var(--text-2);
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.18s var(--ease);
+        background: transparent;
+        border: none;
+        text-align: left;
+        font-weight: 500;
+        width: 100%;
+        position: relative;
+    }
+    .doc-item:hover { background: var(--panel); color: var(--text); }
+    .doc-item.active {
+        background: var(--panel-2);
+        color: var(--text);
+    }
+    .doc-item .dot {
+        width: 8px; height: 8px;
+        border-radius: 2px;
+        background: var(--muted-2);
+        flex-shrink: 0;
+    }
+    .doc-item.active .dot { background: var(--accent); }
+    .doc-item .name {
         flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .doc-item .count {
+        margin-left: auto;
+        color: var(--muted);
+        font-size: 11px;
+        font-family: ui-monospace, monospace;
+    }
+
+    .sidebar-spacer { flex: 1; }
+
+    .profile-card {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 10px;
+        margin-bottom: 8px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: background 0.4s var(--ease), border-color 0.4s var(--ease);
+    }
+    .profile-card .avatar {
+        width: 32px; height: 32px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        color: white;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 13px;
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+    .profile-card .info { flex: 1; min-width: 0; }
+    .profile-card .name {
+        font-size: 12px;
+        font-weight: 600;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .profile-card .sub {
+        font-size: 11px;
+        color: var(--muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .profile-card .tag {
+        background: var(--success);
+        color: white;
+        padding: 2px 7px;
+        border-radius: 8px;
+        font-size: 10px;
+        font-weight: 600;
+    }
+
+    .theme-toggle {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        padding: 3px;
+        gap: 2px;
+        transition: background 0.4s var(--ease), border-color 0.4s var(--ease);
+    }
+    .theme-toggle button {
+        background: transparent;
+        border: none;
+        color: var(--muted);
+        padding: 6px;
+        font-size: 12px;
+        font-weight: 500;
+        cursor: pointer;
+        border-radius: 6px;
+        transition: all 0.18s var(--ease);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+    }
+    .theme-toggle button:hover { color: var(--text); }
+    .theme-toggle button.active {
+        background: var(--panel-3);
+        color: var(--text);
+        box-shadow: var(--shadow-sm);
+    }
+
+    /* ============================================================
+       CENTER — main editor
+       ============================================================ */
+    .center {
         display: flex;
         flex-direction: column;
         min-width: 0;
-        position: relative;
+        background: var(--panel);
+        border-right: 1px solid var(--border);
+        transition: background 0.4s var(--ease), border-color 0.4s var(--ease);
     }
 
-    /* Find & Replace toolbar */
+    .doc-header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 14px 20px;
+        border-bottom: 1px solid var(--border);
+        transition: border-color 0.4s var(--ease);
+    }
+    .doc-title {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: var(--text);
+        font-size: 16px;
+        font-weight: 600;
+        padding: 4px 8px;
+        margin-left: -8px;
+        border-radius: 6px;
+        outline: none;
+        font-family: inherit;
+        transition: background 0.2s var(--ease);
+        min-width: 0;
+    }
+    .doc-title:hover { background: var(--panel-2); }
+    .doc-title:focus { background: var(--panel-2); box-shadow: var(--ring); }
+
+    .doc-header .actions {
+        display: flex;
+        gap: 4px;
+        align-items: center;
+    }
+
+    /* Find & Replace bar */
     .find-bar {
         max-height: 0;
         overflow: hidden;
-        background: var(--panel);
+        background: var(--panel-2);
         border-bottom: 1px solid var(--border);
         display: flex;
         gap: 8px;
         align-items: center;
         flex-wrap: wrap;
         transition: max-height 0.3s var(--ease), padding 0.3s var(--ease);
-        padding: 0 16px;
+        padding: 0 20px;
     }
     .find-bar.open {
         max-height: 80px;
-        padding: 10px 16px;
-    }
-    .find-bar input[type="text"] {
-        padding: 6px 10px;
-        border: 1px solid var(--border);
-        border-radius: 6px;
-        font-size: 13px;
-        min-width: 160px;
-        background: var(--panel);
-        color: var(--text);
-        transition: all 0.18s var(--ease);
-    }
-    .find-bar input[type="text"]:focus {
-        outline: none;
-        border-color: var(--accent);
-        box-shadow: var(--ring);
-    }
-    .find-bar .count {
-        font-size: 12px;
-        color: var(--muted);
-        min-width: 80px;
-    }
-    .find-bar label {
-        font-size: 12px;
-        color: var(--text);
-        display: flex;
-        align-items: center;
-        gap: 4px;
-        cursor: pointer;
-    }
-    .find-bar .btn { padding: 5px 10px; font-size: 12px; }
-
-    mark.find-match {
-        background: var(--highlight);
-        padding: 0 1px;
-        border-radius: 2px;
-    }
-    mark.find-current {
-        background: var(--warning);
-        color: #fff;
+        padding: 12px 20px;
     }
 
-    /* Preview pane */
+    /* Preview area */
     .preview-pane {
         flex: 1;
-        padding: 24px;
         overflow-y: auto;
-        background: var(--bg);
-        transition: background-color 0.4s var(--ease);
-    }
-
-    #preview {
+        padding: 20px;
+        position: relative;
         background: var(--panel);
+        transition: background 0.4s var(--ease);
+    }
+    #preview {
+        background: var(--panel-2);
         border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 36px 44px;
+        border-radius: var(--radius);
+        padding: 32px 40px;
         min-height: 100%;
         font-size: 15px;
-        line-height: 1.7;
+        line-height: 1.75;
         outline: none;
-        box-shadow: var(--shadow-sm);
-        transition: background-color 0.4s var(--ease), border-color 0.4s var(--ease);
+        color: var(--text);
+        transition: background 0.4s var(--ease), border-color 0.4s var(--ease);
     }
-    #preview:focus {
-        border-color: var(--accent);
-        box-shadow: var(--shadow);
-    }
-    #preview p { margin-bottom: 12px; }
-    #preview h1, #preview h2, #preview h3 { margin: 18px 0 10px; font-weight: 600; letter-spacing: -0.01em; }
-    #preview h1 { font-size: 22px; }
-    #preview h2 { font-size: 18px; }
+    #preview:focus { border-color: var(--border-2); }
+    #preview p { margin-bottom: 14px; }
+    #preview h1, #preview h2, #preview h3 { margin: 20px 0 10px; font-weight: 600; letter-spacing: -0.01em; }
+    #preview h1 { font-size: 24px; }
+    #preview h2 { font-size: 19px; }
     #preview h3 { font-size: 16px; }
-
-    /* Empty state */
     #preview.empty::before {
         content: "Drop a .docx here, click Upload, or start typing…";
         color: var(--muted);
         font-style: italic;
     }
-
-    /* Tables (mammoth strips styling — restored) */
     #preview table {
         border-collapse: collapse;
         margin: 14px 0;
-        width: auto;
         max-width: 100%;
         font-size: 14px;
     }
-    #preview table td,
-    #preview table th {
+    #preview table td, #preview table th {
         border: 1px solid var(--border-2);
         padding: 8px 12px;
         vertical-align: top;
         text-align: left;
     }
-    #preview table th {
-        background: var(--panel-2);
-        font-weight: 600;
-    }
-    #preview table tr:nth-child(even) td { background: var(--panel-2); }
+    #preview table th { background: var(--panel-3); font-weight: 600; }
+    #preview table tr:nth-child(even) td { background: var(--panel-3); }
     #preview table p { margin: 0; }
-    #preview img { max-width: 100%; height: auto; }
+    #preview img { max-width: 100%; height: auto; border-radius: 6px; }
     #preview ul, #preview ol { margin: 8px 0 12px 24px; }
     #preview blockquote {
         border-left: 3px solid var(--border-2);
@@ -358,38 +461,43 @@
         color: var(--muted);
         margin: 12px 0;
     }
-
-    /* Complex words */
     .complex-word {
         background: var(--complex);
         border-radius: 3px;
         padding: 0 2px;
         cursor: pointer;
-        transition: filter 0.18s var(--ease), transform 0.18s var(--ease);
+        transition: filter 0.18s var(--ease);
     }
-    .complex-word:hover { filter: brightness(0.9); transform: translateY(-0.5px); }
-
-    /* Selection highlighted by a recent action */
+    .complex-word:hover { filter: brightness(1.2); }
     .pulse-highlight {
         animation: pulseHighlight 1.2s var(--ease) 1;
+        border-radius: 3px;
     }
     @keyframes pulseHighlight {
-        0%   { background-color: rgba(79, 70, 229, 0.25); }
+        0%   { background-color: var(--accent-bg); }
         100% { background-color: transparent; }
     }
+    mark.find-match {
+        background: var(--highlight);
+        padding: 0 1px;
+        border-radius: 2px;
+        color: var(--text);
+    }
+    mark.find-current {
+        background: var(--warning);
+        color: #18181b;
+    }
 
-    /* Drag-drop overlay */
     .drop-overlay {
         position: absolute;
-        inset: 0;
-        background: rgba(79, 70, 229, 0.08);
+        inset: 16px;
+        background: rgba(139, 92, 246, 0.08);
         border: 2px dashed var(--accent);
-        border-radius: 12px;
-        margin: 16px;
+        border-radius: var(--radius);
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 16px;
+        font-size: 15px;
         font-weight: 600;
         color: var(--accent);
         pointer-events: none;
@@ -398,175 +506,405 @@
         transition: opacity 0.2s var(--ease), transform 0.2s var(--ease);
         z-index: 5;
     }
-    .drop-overlay.show {
-        opacity: 1;
-        transform: scale(1);
-    }
+    .drop-overlay.show { opacity: 1; transform: scale(1); }
 
-    /* Stats footer */
+    /* Stats bar */
     .stats-bar {
-        background: var(--panel);
+        background: var(--panel-2);
         border-top: 1px solid var(--border);
-        padding: 8px 16px;
+        padding: 8px 20px;
         display: flex;
-        gap: 18px;
+        gap: 16px;
         font-size: 12px;
         color: var(--muted);
         flex-wrap: wrap;
         align-items: center;
-        transition: background-color 0.4s var(--ease), border-color 0.4s var(--ease);
+        transition: background 0.4s var(--ease), border-color 0.4s var(--ease);
     }
     .stats-bar .stat strong { color: var(--text); font-weight: 600; }
     .stats-bar .readability {
         margin-left: auto;
         padding: 3px 10px;
-        border-radius: 12px;
+        border-radius: 10px;
         font-weight: 600;
         font-size: 11px;
-        transition: background-color 0.3s var(--ease);
     }
-    .read-easy   { background: rgba(34, 197, 94, 0.15);  color: var(--success); }
-    .read-medium { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
-    .read-hard   { background: rgba(220, 38, 38, 0.15);  color: var(--danger); }
+    .read-easy   { background: rgba(74, 222, 128, 0.15);  color: var(--success); }
+    .read-medium { background: rgba(251, 191, 36, 0.15);  color: var(--warning); }
+    .read-hard   { background: rgba(248, 113, 113, 0.15); color: var(--danger); }
 
-    /* Right pane (control panel) */
-    .control-pane {
-        width: 340px;
+    /* Command bar */
+    .command-bar {
+        padding: 12px 20px 16px;
         background: var(--panel);
-        border-left: 1px solid var(--border);
+        border-top: 1px solid var(--border);
+        transition: background 0.4s var(--ease), border-color 0.4s var(--ease);
+    }
+    .command-input {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: var(--panel-3);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: 10px 14px;
+        transition: all 0.2s var(--ease);
+    }
+    .command-input:focus-within {
+        border-color: var(--accent);
+        box-shadow: var(--ring);
+    }
+    .command-input .ic {
+        width: 22px; height: 22px;
+        border-radius: 50%;
+        background: var(--accent);
+        color: white;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        flex-shrink: 0;
+    }
+    .command-input input {
+        flex: 1;
+        background: transparent;
+        border: none;
+        outline: none;
+        color: var(--text);
+        font-size: 13px;
+        font-family: inherit;
+    }
+    .command-input input::placeholder { color: var(--muted); }
+    .command-input .kbd {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 5px;
+        padding: 2px 7px;
+        font-family: ui-monospace, monospace;
+        font-size: 11px;
+        color: var(--muted);
+    }
+
+    /* ============================================================
+       RIGHT SIDEBAR — control modules
+       ============================================================ */
+    .sidebar-right {
+        background: var(--app-bg);
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        transition: background 0.4s var(--ease);
+    }
+    .sidebar-right .top {
+        padding: 14px 16px;
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: border-color 0.4s var(--ease);
+    }
+    .sidebar-right .top h3 {
+        font-size: 14px;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    .sidebar-right .top .count {
+        font-size: 11px;
+        color: var(--muted);
+        font-family: ui-monospace, monospace;
+    }
+    .module-list {
+        flex: 1;
         overflow-y: auto;
-        padding: 16px;
-        transition: background-color 0.4s var(--ease), border-color 0.4s var(--ease);
+        padding: 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
     }
 
     .module {
-        background: var(--panel-2);
+        background: var(--panel);
         border: 1px solid var(--border);
-        border-radius: 10px;
-        padding: 14px;
-        margin-bottom: 12px;
+        border-radius: var(--radius);
+        overflow: hidden;
         transition: all 0.25s var(--ease);
     }
-    .module:hover {
-        border-color: var(--border-2);
-        box-shadow: var(--shadow-sm);
-    }
-    .module h2 {
-        font-size: 11px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        color: var(--muted);
-        margin-bottom: 12px;
+    .module:hover { border-color: var(--border-2); }
+    .module-head {
+        padding: 12px 14px;
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 10px;
+        cursor: pointer;
+        user-select: none;
     }
-    .module h2::before {
-        content: "";
-        width: 6px; height: 6px;
-        background: var(--accent);
-        border-radius: 50%;
+    .module-head .pill {
+        width: 22px; height: 22px;
+        border-radius: 6px;
+        background: var(--accent-bg);
+        color: var(--accent-2);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 12px;
+        flex-shrink: 0;
     }
-    .module label {
-        display: block;
+    .module-head .title {
+        flex: 1;
         font-size: 13px;
-        margin-bottom: 8px;
+        font-weight: 600;
+        color: var(--text);
+    }
+    .module-head .sub {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 2px;
+    }
+    .module-head .chev {
+        color: var(--muted);
+        font-size: 12px;
+        transition: transform 0.2s var(--ease);
+    }
+    .module.open .module-head .chev { transform: rotate(180deg); }
+
+    .module-body {
+        padding: 0 14px 14px;
+        border-top: 1px solid var(--border);
+        margin-top: -1px;
+        max-height: 0;
+        overflow: hidden;
+        opacity: 0;
+        transition: max-height 0.3s var(--ease), opacity 0.2s var(--ease), padding 0.3s var(--ease);
+    }
+    .module.open .module-body {
+        max-height: 800px;
+        opacity: 1;
+        padding: 12px 14px 14px;
     }
 
-    /* Slider — custom track */
+    .module-body label {
+        display: block;
+        font-size: 12px;
+        margin-bottom: 6px;
+        color: var(--text-2);
+    }
+    .module-body .row + .row { margin-top: 10px; }
+
+    /* Slider */
     .slider-wrap {
         display: flex;
         align-items: center;
         gap: 10px;
-        margin-bottom: 12px;
+        margin-bottom: 10px;
     }
     input[type="range"] {
         flex: 1;
         -webkit-appearance: none;
         appearance: none;
         height: 4px;
-        background: var(--border);
+        background: var(--border-2);
         border-radius: 4px;
         outline: none;
-        transition: background 0.18s var(--ease);
     }
     input[type="range"]::-webkit-slider-thumb {
         -webkit-appearance: none;
         appearance: none;
-        width: 16px; height: 16px;
+        width: 14px; height: 14px;
         background: var(--accent);
         border-radius: 50%;
         cursor: pointer;
         transition: transform 0.18s var(--ease), box-shadow 0.18s var(--ease);
-        box-shadow: var(--shadow-sm);
     }
     input[type="range"]::-webkit-slider-thumb:hover {
-        transform: scale(1.15);
+        transform: scale(1.2);
         box-shadow: var(--ring);
     }
-    input[type="range"]::-moz-range-thumb {
-        width: 16px; height: 16px;
-        background: var(--accent);
-        border: none;
-        border-radius: 50%;
-        cursor: pointer;
-    }
     .slider-value {
-        min-width: 36px;
+        min-width: 34px;
         text-align: right;
         font-weight: 600;
-        color: var(--accent);
-        font-size: 13px;
+        color: var(--accent-2);
+        font-size: 12px;
         font-variant-numeric: tabular-nums;
     }
 
+    /* Checkboxes */
     .checkbox-group label {
         display: flex;
         align-items: center;
         gap: 8px;
-        margin-bottom: 6px;
+        margin-bottom: 4px;
         cursor: pointer;
-        font-size: 13px;
-        padding: 4px 6px;
+        font-size: 12.5px;
+        padding: 5px 6px;
         margin-left: -6px;
         border-radius: 5px;
-        transition: background-color 0.15s var(--ease);
+        transition: background 0.15s var(--ease);
+        color: var(--text-2);
     }
-    .checkbox-group label:hover { background: var(--panel); }
+    .checkbox-group label:hover { background: var(--panel-2); }
     .checkbox-group input { cursor: pointer; accent-color: var(--accent); }
 
+    /* Select */
     select {
         width: 100%;
-        padding: 7px 10px;
+        padding: 8px 10px;
         border: 1px solid var(--border);
-        border-radius: 7px;
-        background: var(--panel);
+        border-radius: var(--radius-sm);
+        background: var(--panel-2);
         color: var(--text);
-        font-size: 13px;
+        font-size: 12.5px;
         cursor: pointer;
+        font-family: inherit;
         transition: all 0.18s var(--ease);
     }
-    select:hover { border-color: var(--border-2); }
     select:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring); }
 
-    .module-btn { width: 100%; margin-top: 8px; justify-content: center; }
+    /* Buttons */
+    .btn {
+        background: var(--accent);
+        color: white;
+        border: 1px solid transparent;
+        padding: 8px 12px;
+        border-radius: var(--radius-sm);
+        font-size: 12.5px;
+        font-weight: 500;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 6px;
+        transition: all 0.18s var(--ease);
+        white-space: nowrap;
+        font-family: inherit;
+    }
+    .btn:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: var(--shadow); }
+    .btn:active { transform: translateY(0) scale(0.97); }
+    .btn:focus-visible { outline: none; box-shadow: var(--ring); }
+    .btn:disabled {
+        background: var(--panel-3);
+        color: var(--muted);
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+    .btn-secondary {
+        background: var(--panel-2);
+        color: var(--text);
+        border-color: var(--border);
+    }
+    .btn-secondary:hover { background: var(--panel-3); border-color: var(--border-2); }
+    .btn-ghost {
+        background: transparent;
+        color: var(--muted);
+    }
+    .btn-ghost:hover { background: var(--panel); color: var(--text); transform: none; box-shadow: none; }
+    .icon-btn {
+        background: transparent;
+        border: 1px solid transparent;
+        color: var(--muted);
+        width: 32px; height: 32px;
+        border-radius: var(--radius-sm);
+        display: inline-flex; align-items: center; justify-content: center;
+        cursor: pointer;
+        transition: all 0.18s var(--ease);
+        font-size: 14px;
+        padding: 0;
+    }
+    .icon-btn:hover {
+        background: var(--panel-2);
+        color: var(--text);
+        border-color: var(--border);
+        transform: translateY(-1px);
+    }
+    .icon-btn:active { transform: scale(0.92); }
+    .icon-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+    .icon-btn svg { width: 16px; height: 16px; }
+
+    .module-btn { width: 100%; padding: 9px 12px; }
 
     .scope-hint {
-        font-size: 11px;
+        font-size: 10.5px;
         color: var(--muted);
         margin-top: 8px;
         padding: 6px 8px;
-        background: var(--panel);
+        background: var(--panel-2);
         border-radius: 5px;
         border-left: 2px solid var(--accent);
     }
 
-    /* ---------- Sonner-style toasts ---------- */
+    /* Find bar inputs */
+    .find-bar input[type="text"] {
+        padding: 7px 10px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        font-size: 13px;
+        min-width: 160px;
+        background: var(--app-bg);
+        color: var(--text);
+        font-family: inherit;
+        transition: all 0.18s var(--ease);
+    }
+    .find-bar input[type="text"]:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: var(--ring);
+    }
+    .find-bar label {
+        font-size: 12px;
+        color: var(--text-2);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        cursor: pointer;
+    }
+    .find-bar .count {
+        font-size: 11px;
+        color: var(--muted);
+        min-width: 80px;
+        font-family: ui-monospace, monospace;
+    }
+    .find-bar .btn, .find-bar .icon-btn {
+        padding: 5px 10px;
+        font-size: 12px;
+        height: 30px;
+    }
+
+    /* CTA at bottom of right sidebar */
+    .sidebar-right .cta {
+        padding: 12px;
+        border-top: 1px solid var(--border);
+        transition: border-color 0.4s var(--ease);
+    }
+    .cta-btn {
+        width: 100%;
+        padding: 11px;
+        background: var(--accent);
+        color: white;
+        border: none;
+        border-radius: var(--radius);
+        font-size: 13px;
+        font-weight: 600;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.18s var(--ease);
+        font-family: inherit;
+    }
+    .cta-btn:hover { background: var(--accent-hover); transform: translateY(-1px); box-shadow: var(--shadow); }
+    .cta-btn:active { transform: translateY(0) scale(0.98); }
+
+    /* ============================================================
+       TOASTS (Sonner-style)
+       ============================================================ */
     #toastContainer {
         position: fixed;
-        bottom: 16px;
-        right: 16px;
+        bottom: 24px;
+        right: 24px;
         display: flex;
         flex-direction: column;
         gap: 8px;
@@ -574,10 +912,10 @@
         pointer-events: none;
     }
     .toast {
-        background: var(--panel);
+        background: var(--panel-2);
         color: var(--text);
         border: 1px solid var(--border);
-        border-radius: 10px;
+        border-radius: var(--radius);
         padding: 12px 14px;
         font-size: 13px;
         box-shadow: var(--shadow-lg);
@@ -594,17 +932,17 @@
     .toast.show { transform: translateX(0); opacity: 1; }
     .toast.hide { transform: translateX(120%); opacity: 0; }
     .toast-icon {
-        width: 18px; height: 18px;
+        width: 20px; height: 20px;
         border-radius: 50%;
         display: flex; align-items: center; justify-content: center;
         font-size: 11px;
         color: #fff;
         flex-shrink: 0;
     }
-    .toast-success .toast-icon { background: var(--success); }
-    .toast-error   .toast-icon { background: var(--danger); }
+    .toast-success .toast-icon { background: var(--success); color: #052e0d; }
+    .toast-error   .toast-icon { background: var(--danger); color: #4a0000; }
     .toast-info    .toast-icon { background: var(--accent); }
-    .toast-warning .toast-icon { background: var(--warning); }
+    .toast-warning .toast-icon { background: var(--warning); color: #432200; }
     .toast .close {
         margin-left: auto;
         color: var(--muted);
@@ -616,42 +954,14 @@
     }
     .toast .close:hover { color: var(--text); }
 
-    /* ---------- Synonym popup ---------- */
-    .synonym-popup {
-        position: absolute;
-        background: var(--text);
-        color: var(--panel);
-        padding: 8px 12px;
-        border-radius: 8px;
-        font-size: 12px;
-        box-shadow: var(--shadow-lg);
-        z-index: 100;
-        opacity: 0;
-        transform: translateY(-4px);
-        animation: popIn 0.2s var(--ease) forwards;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-    }
-    @keyframes popIn { to { opacity: 1; transform: translateY(0); } }
-    .synonym-popup button {
-        background: var(--accent);
-        color: #fff;
-        border: none;
-        padding: 3px 10px;
-        border-radius: 5px;
-        font-size: 11px;
-        cursor: pointer;
-        transition: background 0.15s var(--ease);
-    }
-    .synonym-popup button:hover { background: var(--accent-hover); }
-
-    /* ---------- Modal (help / shortcuts) ---------- */
+    /* ============================================================
+       MODALS (help + filename + command palette)
+       ============================================================ */
     .modal-backdrop {
         position: fixed;
         inset: 0;
-        background: rgba(15, 23, 42, 0.5);
-        backdrop-filter: blur(4px);
+        background: rgba(0,0,0,0.55);
+        backdrop-filter: blur(6px);
         opacity: 0;
         pointer-events: none;
         transition: opacity 0.25s var(--ease);
@@ -665,9 +975,9 @@
         background: var(--panel);
         border: 1px solid var(--border);
         border-radius: 14px;
-        padding: 24px;
-        width: 480px;
-        max-width: 90vw;
+        padding: 22px;
+        width: 460px;
+        max-width: 92vw;
         max-height: 80vh;
         overflow-y: auto;
         box-shadow: var(--shadow-lg);
@@ -677,19 +987,25 @@
     .modal-backdrop.show .modal { transform: scale(1) translateY(0); }
     .modal h2 {
         font-size: 16px; font-weight: 600;
-        margin-bottom: 12px;
+        margin-bottom: 14px;
         display: flex; align-items: center; justify-content: space-between;
     }
     .modal h2 .close {
         background: var(--panel-2); border: 1px solid var(--border);
-        width: 26px; height: 26px;
-        border-radius: 6px;
+        width: 28px; height: 28px;
+        border-radius: 7px;
         cursor: pointer;
         font-size: 14px;
-        transition: all 0.15s var(--ease);
         color: var(--text);
+        transition: all 0.15s var(--ease);
     }
-    .modal h2 .close:hover { background: var(--border); }
+    .modal h2 .close:hover { background: var(--panel-3); }
+    .modal .description {
+        font-size: 12px;
+        color: var(--muted);
+        margin-bottom: 14px;
+        line-height: 1.55;
+    }
     .shortcut-row {
         display: flex;
         justify-content: space-between;
@@ -707,11 +1023,140 @@
         padding: 2px 7px;
         font-family: ui-monospace, monospace;
         font-size: 11px;
-        color: var(--text);
+        color: var(--text-2);
         margin-left: 4px;
     }
 
-    /* ---------- Loading spinner ---------- */
+    /* Filename modal */
+    .field {
+        margin-bottom: 14px;
+    }
+    .field label {
+        display: block;
+        font-size: 12px;
+        margin-bottom: 6px;
+        color: var(--text-2);
+    }
+    .field input, .field select {
+        width: 100%;
+        padding: 10px 12px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--panel-2);
+        color: var(--text);
+        font-size: 13px;
+        font-family: inherit;
+        transition: all 0.18s var(--ease);
+    }
+    .field input:focus, .field select:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: var(--ring);
+    }
+    .field .ext {
+        display: flex; gap: 6px;
+    }
+    .field .ext input { flex: 1; }
+    .field .ext select { width: 100px; }
+    .modal-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 8px;
+        margin-top: 16px;
+    }
+
+    /* Command palette */
+    .palette {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 8px;
+        width: 480px;
+        max-width: 92vw;
+        max-height: 60vh;
+        overflow: hidden;
+        box-shadow: var(--shadow-lg);
+        display: flex;
+        flex-direction: column;
+        transform: translateY(-8px);
+        transition: transform 0.3s var(--ease);
+    }
+    .modal-backdrop.show .palette { transform: translateY(0); }
+    .palette input {
+        background: transparent;
+        border: none;
+        outline: none;
+        padding: 12px;
+        font-size: 14px;
+        color: var(--text);
+        border-bottom: 1px solid var(--border);
+        font-family: inherit;
+    }
+    .palette-list {
+        flex: 1;
+        overflow-y: auto;
+        padding: 4px 0;
+    }
+    .palette-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 9px 12px;
+        cursor: pointer;
+        border-radius: 6px;
+        margin: 1px 4px;
+        transition: background 0.15s var(--ease);
+    }
+    .palette-item:hover, .palette-item.active {
+        background: var(--accent-bg);
+    }
+    .palette-item .ic {
+        width: 22px; height: 22px;
+        border-radius: 5px;
+        background: var(--panel-3);
+        display: flex; align-items: center; justify-content: center;
+        font-size: 11px;
+        color: var(--text-2);
+        flex-shrink: 0;
+    }
+    .palette-item .label { font-size: 13px; flex: 1; }
+    .palette-item .hint {
+        font-size: 11px;
+        color: var(--muted);
+        font-family: ui-monospace, monospace;
+    }
+
+    /* Synonym popup */
+    .synonym-popup {
+        position: absolute;
+        background: var(--panel-2);
+        color: var(--text);
+        border: 1px solid var(--border);
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        box-shadow: var(--shadow-lg);
+        z-index: 100;
+        opacity: 0;
+        transform: translateY(-4px);
+        animation: popIn 0.2s var(--ease) forwards;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    @keyframes popIn { to { opacity: 1; transform: translateY(0); } }
+    .synonym-popup button {
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        padding: 4px 10px;
+        border-radius: 5px;
+        font-size: 11px;
+        cursor: pointer;
+    }
+    .synonym-popup button:hover { background: var(--accent-hover); }
+
+    /* Loading spinner */
     .spinner {
         display: inline-block;
         width: 12px; height: 12px;
@@ -722,17 +1167,16 @@
     }
     @keyframes spin { to { transform: rotate(360deg); } }
 
-    /* ---------- Scrollbar polish ---------- */
-    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 8px; height: 8px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb {
         background: var(--border-2);
-        border-radius: 5px;
-        border: 2px solid var(--bg);
+        border-radius: 4px;
     }
-    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted-2); }
 
-    /* ---------- Dropdown menu (Download) ---------- */
+    /* Menu (download dropdown) */
     .menu-wrap { position: relative; }
     .menu {
         position: absolute;
@@ -743,21 +1187,20 @@
         border-radius: 10px;
         padding: 6px;
         box-shadow: var(--shadow-lg);
-        min-width: 160px;
+        min-width: 180px;
         opacity: 0;
         transform: translateY(-6px);
         pointer-events: none;
-        transition: opacity 0.2s var(--ease), transform 0.2s var(--ease);
+        transition: all 0.2s var(--ease);
         z-index: 60;
     }
     .menu.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
     .menu button {
         display: flex;
         width: 100%;
-        text-align: left;
         background: transparent;
         border: none;
-        padding: 7px 10px;
+        padding: 8px 10px;
         font-size: 13px;
         color: var(--text);
         border-radius: 6px;
@@ -765,50 +1208,128 @@
         transition: background 0.15s var(--ease);
         align-items: center;
         gap: 8px;
+        font-family: inherit;
+        text-align: left;
     }
     .menu button:hover { background: var(--panel-2); }
-    .menu .menu-sub { color: var(--muted); font-size: 11px; margin-left: auto; }
+    .menu .menu-sub { color: var(--muted); font-size: 11px; margin-left: auto; font-family: ui-monospace, monospace; }
+    .menu .divider { height: 1px; background: var(--border); margin: 4px 0; }
 
+    /* Responsive — collapse right pane on narrow screens */
+    @media (max-width: 1100px) {
+        .app { grid-template-columns: 220px 1fr 300px; }
+    }
+    @media (max-width: 900px) {
+        .app { grid-template-columns: 1fr; }
+        .sidebar-left, .sidebar-right { display: none; }
+    }
+
+    /* SVG icons sizing in nav */
+    .nav-item svg, .doc-item svg { width: 16px; height: 16px; stroke-width: 2; }
     </style>
 </head>
 <body>
 
-    <!-- ====================== HEADER ====================== -->
-    <header>
-        <h1>Text Variation &amp; Readability Editor</h1>
-        <div class="actions">
-            <button class="icon-btn" id="undoBtn" title="Undo (Ctrl+Z)" disabled>↶</button>
-            <button class="icon-btn" id="redoBtn" title="Redo (Ctrl+Y)" disabled>↷</button>
-            <span class="sep"></span>
+    <div class="app">
 
-            <label for="fileInput" class="file-label">Upload .docx</label>
-            <input type="file" id="fileInput" accept=".docx" />
-
-            <button id="findToggleBtn" class="btn btn-secondary" title="Find &amp; Replace (Ctrl+F)">Find</button>
-
-            <div class="menu-wrap">
-                <button id="downloadMenuBtn" class="btn">Download ▾</button>
-                <div class="menu" id="downloadMenu">
-                    <button data-fmt="docx">.docx <span class="menu-sub">Word</span></button>
-                    <button data-fmt="html">.html <span class="menu-sub">Webpage</span></button>
-                    <button data-fmt="txt">.txt  <span class="menu-sub">Plain text</span></button>
-                </div>
+        <!-- ====================== LEFT SIDEBAR ====================== -->
+        <aside class="sidebar-left">
+            <div class="brand">
+                <div class="brand-logo">CT</div>
+                <span>Copy Tool</span>
             </div>
 
-            <span class="sep"></span>
-            <button class="icon-btn" id="helpBtn" title="Keyboard shortcuts (?)">?</button>
-            <button class="icon-btn" id="themeBtn" title="Toggle theme">☾</button>
-        </div>
-    </header>
+            <nav class="nav-main">
+                <button class="nav-item active" data-action="focus-editor">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                    Editor
+                </button>
+                <button class="nav-item" data-action="open-find">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                    Find &amp; Replace <span class="kbd-hint">Ctrl F</span>
+                </button>
+                <label class="nav-item" for="fileInput" style="cursor:pointer;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                    Upload .docx
+                </label>
+                <input type="file" id="fileInput" accept=".docx" style="display:none" />
+                <button class="nav-item" data-action="open-palette">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><path d="M9 11l3 3L22 4M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+                    Commands <span class="kbd-hint">Ctrl K</span>
+                </button>
+                <button class="nav-item" data-action="open-help">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3M12 17h.01"/></svg>
+                    Help &amp; Shortcuts <span class="kbd-hint">?</span>
+                </button>
+            </nav>
 
-    <!-- ====================== MAIN ====================== -->
-    <main>
-        <div class="preview-wrap">
+            <div class="nav-section-title">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" class="chev"><path d="m6 9 6 6 6-6"/></svg>
+                Recent documents
+            </div>
+            <div class="doc-list" id="docList">
+                <button class="doc-item active" data-doc="current">
+                    <span class="dot"></span>
+                    <span class="name">Untitled</span>
+                </button>
+                <!-- recent docs populated from localStorage -->
+            </div>
 
-            <!-- Drop overlay (shown while dragging files) -->
-            <div class="drop-overlay" id="dropOverlay">Drop your .docx file to import</div>
+            <div class="sidebar-spacer"></div>
 
-            <!-- Find & Replace -->
+            <div class="profile-card">
+                <div class="avatar" id="avatarInitials">CV</div>
+                <div class="info">
+                    <div class="name" id="profileName">cloudvenix</div>
+                    <div class="sub" id="profileEmail">arbazzqureshi@outlook.com</div>
+                </div>
+                <span class="tag">Free</span>
+            </div>
+
+            <div class="theme-toggle" id="themeToggle">
+                <button data-theme="light">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41"/></svg>
+                    Light
+                </button>
+                <button data-theme="dark" class="active">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+                    Dark
+                </button>
+            </div>
+        </aside>
+
+        <!-- ====================== CENTER ====================== -->
+        <main class="center">
+
+            <header class="doc-header">
+                <input type="text" class="doc-title" id="docTitle" value="Untitled" placeholder="Document title" />
+                <div class="actions">
+                    <button class="icon-btn" id="undoBtn" title="Undo (Ctrl+Z)" disabled>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+                    </button>
+                    <button class="icon-btn" id="redoBtn" title="Redo (Ctrl+Y)" disabled>
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 7v6h-6"/><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"/></svg>
+                    </button>
+                    <button class="icon-btn" id="findToggleBtn" title="Find &amp; Replace (Ctrl+F)">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                    </button>
+                    <div class="menu-wrap">
+                        <button class="btn" id="downloadMenuBtn">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                            Download
+                        </button>
+                        <div class="menu" id="downloadMenu">
+                            <button data-fmt="docx">.docx <span class="menu-sub">Word</span></button>
+                            <button data-fmt="pdf">.pdf <span class="menu-sub">PDF</span></button>
+                            <button data-fmt="html">.html <span class="menu-sub">Webpage</span></button>
+                            <button data-fmt="txt">.txt <span class="menu-sub">Plain text</span></button>
+                            <div class="divider"></div>
+                            <button data-fmt="md">.md <span class="menu-sub">Markdown</span></button>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
             <div class="find-bar" id="findBar">
                 <input type="text" id="findInput"    placeholder="Find…" />
                 <input type="text" id="replaceInput" placeholder="Replace…" />
@@ -821,11 +1342,11 @@
                 <button class="btn btn-secondary" id="findCloseBtn">✕</button>
             </div>
 
-            <section class="preview-pane">
+            <div class="preview-pane">
+                <div class="drop-overlay" id="dropOverlay">Drop your .docx file to import</div>
                 <div id="preview" contenteditable="true" class="empty" spellcheck="false"></div>
-            </section>
+            </div>
 
-            <!-- Stats footer -->
             <div class="stats-bar" id="statsBar">
                 <span class="stat"><strong id="statWords">0</strong> words</span>
                 <span class="stat"><strong id="statChars">0</strong> chars</span>
@@ -834,114 +1355,236 @@
                 <span class="stat"><strong id="statReadTime">0</strong> min read</span>
                 <span class="readability" id="readability" title="Flesch-Kincaid grade level">—</span>
             </div>
-        </div>
 
-        <!-- ====================== CONTROL PANEL ====================== -->
-        <aside class="control-pane">
+            <div class="command-bar">
+                <div class="command-input" id="commandInput">
+                    <span class="ic">/</span>
+                    <input type="text" id="commandQuery" placeholder="Type '/' for commands…" readonly />
+                    <span class="kbd">Ctrl K</span>
+                </div>
+            </div>
+        </main>
 
-            <!-- Module 1: Imperfections -->
-            <div class="module">
-                <h2>Organic Imperfection</h2>
+        <!-- ====================== RIGHT SIDEBAR ====================== -->
+        <aside class="sidebar-right">
+            <div class="top">
+                <h3>Tools</h3>
+                <span class="count" id="moduleCount">5 modules</span>
+            </div>
 
-                <label for="intensity">Intensity</label>
-                <div class="slider-wrap">
-                    <input type="range" id="intensity" min="1" max="100" value="10" />
-                    <span class="slider-value" id="intensityValue">10</span>
+            <div class="module-list" id="moduleList">
+
+                <!-- Imperfections -->
+                <div class="module open" data-module="imperfections">
+                    <div class="module-head">
+                        <span class="pill">~</span>
+                        <div class="title">Organic Imperfection
+                            <div class="sub">Capitalization, articles, transposition</div>
+                        </div>
+                        <span class="chev">▾</span>
+                    </div>
+                    <div class="module-body">
+                        <div class="row">
+                            <label for="intensity">Intensity</label>
+                            <div class="slider-wrap">
+                                <input type="range" id="intensity" min="1" max="100" value="10" />
+                                <span class="slider-value" id="intensityValue">10</span>
+                            </div>
+                        </div>
+                        <div class="checkbox-group">
+                            <label><input type="checkbox" id="capVariance" checked /> Capitalization variance</label>
+                            <label><input type="checkbox" id="articleSwap" checked /> Article swapping (a / an / the)</label>
+                            <label><input type="checkbox" id="transposition" checked /> Letter transposition</label>
+                            <label><input type="checkbox" id="punctuationDrift" /> Punctuation drift</label>
+                            <label><input type="checkbox" id="doubleSpace" /> Random double-space</label>
+                        </div>
+                        <button id="applyImperfectionsBtn" class="btn module-btn" style="margin-top:10px;">Apply</button>
+                        <div class="scope-hint" id="imperfectionScope">Scope: entire document</div>
+                    </div>
                 </div>
 
-                <div class="checkbox-group">
-                    <label><input type="checkbox" id="capVariance" checked /> Capitalization variance</label>
-                    <label><input type="checkbox" id="articleSwap" checked /> Article swapping (a/an/the)</label>
-                    <label><input type="checkbox" id="transposition" checked /> Letter transposition</label>
-                    <label><input type="checkbox" id="punctuationDrift" /> Punctuation drift</label>
-                    <label><input type="checkbox" id="doubleSpace" /> Random double-space</label>
+                <!-- Paraphrase -->
+                <div class="module" data-module="paraphrase">
+                    <div class="module-head">
+                        <span class="pill">≈</span>
+                        <div class="title">Paraphrase
+                            <div class="sub">Rewrite with style</div>
+                        </div>
+                        <span class="chev">▾</span>
+                    </div>
+                    <div class="module-body">
+                        <label for="paraphraseStyle">Style</label>
+                        <select id="paraphraseStyle">
+                            <option value="standard">Standard</option>
+                            <option value="formal">Formal</option>
+                            <option value="casual">Casual</option>
+                            <option value="concise">Concise</option>
+                        </select>
+                        <button id="paraphraseBtn" class="btn module-btn" style="margin-top:10px;">Paraphrase</button>
+                        <div class="scope-hint" id="paraphraseScope">Scope: entire document</div>
+                    </div>
                 </div>
 
-                <button id="applyImperfectionsBtn" class="btn module-btn">Apply</button>
-                <div class="scope-hint" id="imperfectionScope">Scope: entire document</div>
+                <!-- HUMANIZE (NEW) -->
+                <div class="module" data-module="humanize">
+                    <div class="module-head">
+                        <span class="pill">★</span>
+                        <div class="title">Humanize
+                            <div class="sub">Remove AI fingerprints, sound natural</div>
+                        </div>
+                        <span class="chev">▾</span>
+                    </div>
+                    <div class="module-body">
+                        <div class="row">
+                            <label for="humanizeIntensity">Intensity</label>
+                            <div class="slider-wrap">
+                                <input type="range" id="humanizeIntensity" min="1" max="100" value="50" />
+                                <span class="slider-value" id="humanizeIntensityValue">50</span>
+                            </div>
+                        </div>
+                        <div class="checkbox-group">
+                            <label><input type="checkbox" id="hum_aiPhrases" checked /> Strip AI buzzwords (delve, tapestry…)</label>
+                            <label><input type="checkbox" id="hum_invisible" checked /> Remove invisible Unicode chars</label>
+                            <label><input type="checkbox" id="hum_smartPunct" checked /> Normalize smart quotes &amp; em-dashes</label>
+                            <label><input type="checkbox" id="hum_contractions" checked /> Use contractions (do not → don't)</label>
+                            <label><input type="checkbox" id="hum_fillers" /> Inject natural fillers (honestly, kinda)</label>
+                            <label><input type="checkbox" id="hum_sentenceVary" /> Vary sentence length</label>
+                            <label><input type="checkbox" id="hum_killBoilerplate" checked /> Remove boilerplate intros</label>
+                        </div>
+                        <button id="humanizeBtn" class="btn module-btn" style="margin-top:10px;">Humanize</button>
+                        <div class="scope-hint" id="humanizeScope">Scope: entire document</div>
+                    </div>
+                </div>
+
+                <!-- Tone -->
+                <div class="module" data-module="tone">
+                    <div class="module-head">
+                        <span class="pill">Aa</span>
+                        <div class="title">Tone
+                            <div class="sub">Simple, academic, casual</div>
+                        </div>
+                        <span class="chev">▾</span>
+                    </div>
+                    <div class="module-body">
+                        <label for="tone">Adjustment</label>
+                        <select id="tone">
+                            <option value="none">— None —</option>
+                            <option value="simple">Simple</option>
+                            <option value="academic">Academic</option>
+                            <option value="conversational">Conversational</option>
+                        </select>
+                        <button id="applyToneBtn" class="btn module-btn" style="margin-top:10px;">Apply Tone</button>
+                        <div class="scope-hint" id="toneScope">Scope: entire document</div>
+                    </div>
+                </div>
+
+                <!-- Complex words -->
+                <div class="module" data-module="complex">
+                    <div class="module-head">
+                        <span class="pill">!</span>
+                        <div class="title">Complex words
+                            <div class="sub">Highlight &amp; suggest simpler synonyms</div>
+                        </div>
+                        <span class="chev">▾</span>
+                    </div>
+                    <div class="module-body">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;">
+                            <input type="checkbox" id="highlightComplex" /> Highlight complex words
+                        </label>
+                        <div class="scope-hint">Click any highlighted word for a simpler suggestion.</div>
+                    </div>
+                </div>
+
             </div>
 
-            <!-- Module 2: Paraphrase -->
-            <div class="module">
-                <h2>Paraphrase</h2>
-                <label for="paraphraseStyle">Style</label>
-                <select id="paraphraseStyle">
-                    <option value="standard">Standard</option>
-                    <option value="formal">Formal</option>
-                    <option value="casual">Casual</option>
-                    <option value="concise">Concise</option>
-                </select>
-                <button id="paraphraseBtn" class="btn module-btn">Paraphrase</button>
-                <div class="scope-hint" id="paraphraseScope">Scope: entire document</div>
+            <div class="cta">
+                <button class="cta-btn" id="ctaApplyAll">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 13l4 4L19 7"/></svg>
+                    Apply All Enabled
+                </button>
             </div>
-
-            <!-- Module 3: Vocabulary & Tone -->
-            <div class="module">
-                <h2>Vocabulary &amp; Tone</h2>
-
-                <label for="tone">Tone</label>
-                <select id="tone">
-                    <option value="none">— None —</option>
-                    <option value="simple">Simple</option>
-                    <option value="academic">Academic</option>
-                    <option value="conversational">Conversational</option>
-                </select>
-                <button id="applyToneBtn" class="btn module-btn">Apply Tone</button>
-
-                <label style="margin-top:14px;display:flex;align-items:center;gap:8px;cursor:pointer;">
-                    <input type="checkbox" id="highlightComplex" />
-                    Highlight complex words
-                </label>
-            </div>
-
         </aside>
-    </main>
 
-    <!-- Toasts -->
+    </div>
+
+    <!-- ====================== TOASTS ====================== -->
     <div id="toastContainer"></div>
 
-    <!-- Help modal -->
+    <!-- ====================== HELP MODAL ====================== -->
     <div class="modal-backdrop" id="helpModal">
         <div class="modal">
             <h2>Keyboard shortcuts <button class="close" id="helpCloseBtn">✕</button></h2>
+            <div class="shortcut-row"><span>Command palette</span> <span><span class="kbd">Ctrl</span><span class="kbd">K</span></span></div>
             <div class="shortcut-row"><span>Find &amp; Replace</span> <span><span class="kbd">Ctrl</span><span class="kbd">F</span></span></div>
             <div class="shortcut-row"><span>Undo</span> <span><span class="kbd">Ctrl</span><span class="kbd">Z</span></span></div>
             <div class="shortcut-row"><span>Redo</span> <span><span class="kbd">Ctrl</span><span class="kbd">Y</span></span></div>
             <div class="shortcut-row"><span>Apply imperfections</span> <span><span class="kbd">Ctrl</span><span class="kbd">I</span></span></div>
             <div class="shortcut-row"><span>Paraphrase</span> <span><span class="kbd">Ctrl</span><span class="kbd">P</span></span></div>
+            <div class="shortcut-row"><span>Humanize</span> <span><span class="kbd">Ctrl</span><span class="kbd">H</span></span></div>
+            <div class="shortcut-row"><span>Save / download</span> <span><span class="kbd">Ctrl</span><span class="kbd">S</span></span></div>
             <div class="shortcut-row"><span>Toggle theme</span> <span><span class="kbd">Ctrl</span><span class="kbd">D</span></span></div>
             <div class="shortcut-row"><span>Show this help</span> <span><span class="kbd">?</span></span></div>
-            <div class="shortcut-row"><span>Close modal / find bar</span> <span><span class="kbd">Esc</span></span></div>
-            <p style="margin-top:14px;font-size:12px;color:var(--muted);line-height:1.6;">
-                Select text in the preview to scope Imperfections or Paraphrase to that selection only.
+            <p class="description" style="margin-top:14px;">
+                Tip: Select text in the editor to scope Imperfections, Paraphrase, Humanize, or Tone to that selection only.
                 With no selection, actions apply to the whole document.
             </p>
         </div>
     </div>
 
-    <script>
-    /* =========================================================
-       Text Variation & Readability Editor
-       Vanilla JS, ES6+, client-side.
-       UI motion inspired by Emil Kowalski (Sonner / Vaul).
-       ========================================================= */
+    <!-- ====================== FILENAME MODAL ====================== -->
+    <div class="modal-backdrop" id="filenameModal">
+        <div class="modal">
+            <h2>Download <button class="close" id="filenameCloseBtn">✕</button></h2>
+            <p class="description">Choose a filename and format. Press Enter to download.</p>
+            <div class="field">
+                <label for="fileNameInput">Filename</label>
+                <div class="ext">
+                    <input type="text" id="fileNameInput" placeholder="document" />
+                    <select id="fileFormatSelect">
+                        <option value="docx">.docx</option>
+                        <option value="pdf">.pdf</option>
+                        <option value="html">.html</option>
+                        <option value="txt">.txt</option>
+                        <option value="md">.md</option>
+                    </select>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" id="filenameCancelBtn">Cancel</button>
+                <button class="btn" id="filenameConfirmBtn">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                    Download
+                </button>
+            </div>
+        </div>
+    </div>
 
-    // ---------- DOM refs ----------
+    <!-- ====================== COMMAND PALETTE ====================== -->
+    <div class="modal-backdrop" id="paletteModal">
+        <div class="palette">
+            <input type="text" id="paletteInput" placeholder="Search a command…" autocomplete="off" />
+            <div class="palette-list" id="paletteList"></div>
+        </div>
+    </div>
+
+    <script>
+    /* =================================================================
+       Copy Tool — vanilla JS, ES6+.
+       Layout inspired by Brainwave (UI8). Motion by Emil Kowalski.
+       ================================================================= */
+
+    /* ============ DOM REFS ============ */
     const fileInput            = document.getElementById('fileInput');
     const preview              = document.getElementById('preview');
     const dropOverlay          = document.getElementById('dropOverlay');
+    const docTitle             = document.getElementById('docTitle');
 
     const undoBtn              = document.getElementById('undoBtn');
     const redoBtn              = document.getElementById('redoBtn');
-    const themeBtn             = document.getElementById('themeBtn');
-    const helpBtn              = document.getElementById('helpBtn');
-    const helpModal            = document.getElementById('helpModal');
-    const helpCloseBtn         = document.getElementById('helpCloseBtn');
 
     const downloadMenuBtn      = document.getElementById('downloadMenuBtn');
     const downloadMenu         = document.getElementById('downloadMenu');
 
-    // Find & Replace
     const findToggleBtn        = document.getElementById('findToggleBtn');
     const findBar              = document.getElementById('findBar');
     const findInput            = document.getElementById('findInput');
@@ -954,7 +1597,6 @@
     const findCloseBtn         = document.getElementById('findCloseBtn');
     const findCount            = document.getElementById('findCount');
 
-    // Stats
     const statWords            = document.getElementById('statWords');
     const statChars            = document.getElementById('statChars');
     const statSentences        = document.getElementById('statSentences');
@@ -962,7 +1604,6 @@
     const statReadTime         = document.getElementById('statReadTime');
     const readability          = document.getElementById('readability');
 
-    // Imperfections
     const intensity            = document.getElementById('intensity');
     const intensityValue       = document.getElementById('intensityValue');
     const capVariance          = document.getElementById('capVariance');
@@ -973,120 +1614,210 @@
     const applyImperfectionsBtn= document.getElementById('applyImperfectionsBtn');
     const imperfectionScope    = document.getElementById('imperfectionScope');
 
-    // Paraphrase
     const paraphraseStyle      = document.getElementById('paraphraseStyle');
     const paraphraseBtn        = document.getElementById('paraphraseBtn');
     const paraphraseScope      = document.getElementById('paraphraseScope');
 
-    // Tone & complex words
+    const humanizeIntensity    = document.getElementById('humanizeIntensity');
+    const humanizeIntensityValue = document.getElementById('humanizeIntensityValue');
+    const hum_aiPhrases        = document.getElementById('hum_aiPhrases');
+    const hum_invisible        = document.getElementById('hum_invisible');
+    const hum_smartPunct       = document.getElementById('hum_smartPunct');
+    const hum_contractions     = document.getElementById('hum_contractions');
+    const hum_fillers          = document.getElementById('hum_fillers');
+    const hum_sentenceVary     = document.getElementById('hum_sentenceVary');
+    const hum_killBoilerplate  = document.getElementById('hum_killBoilerplate');
+    const humanizeBtn          = document.getElementById('humanizeBtn');
+    const humanizeScope        = document.getElementById('humanizeScope');
+
     const toneSelect           = document.getElementById('tone');
     const applyToneBtn         = document.getElementById('applyToneBtn');
+    const toneScope            = document.getElementById('toneScope');
     const highlightComplex     = document.getElementById('highlightComplex');
 
     const toastContainer       = document.getElementById('toastContainer');
+    const helpModal            = document.getElementById('helpModal');
+    const helpCloseBtn         = document.getElementById('helpCloseBtn');
+    const filenameModal        = document.getElementById('filenameModal');
+    const fileNameInput        = document.getElementById('fileNameInput');
+    const fileFormatSelect     = document.getElementById('fileFormatSelect');
+    const filenameConfirmBtn   = document.getElementById('filenameConfirmBtn');
+    const filenameCancelBtn    = document.getElementById('filenameCancelBtn');
+    const filenameCloseBtn     = document.getElementById('filenameCloseBtn');
+    const paletteModal         = document.getElementById('paletteModal');
+    const paletteInput         = document.getElementById('paletteInput');
+    const paletteList          = document.getElementById('paletteList');
+    const ctaApplyAll          = document.getElementById('ctaApplyAll');
+    const themeToggleEl        = document.getElementById('themeToggle');
 
-    // ---------- Mock dictionary (20 complex words → simpler synonyms) ----------
+    /* ============ COMPLEX WORD DICTIONARY ============ */
     const COMPLEX_WORDS = {
-        'utilize':        'use',
-        'commence':       'start',
-        'terminate':      'end',
-        'endeavor':       'try',
-        'facilitate':     'help',
-        'demonstrate':    'show',
-        'subsequently':   'later',
-        'sufficient':     'enough',
-        'numerous':       'many',
-        'fundamental':    'basic',
-        'approximately':  'about',
-        'consequently':   'so',
-        'ascertain':      'find out',
-        'expedite':       'speed up',
-        'optimal':        'best',
-        'paradigm':       'model',
-        'leverage':       'use',
-        'methodology':    'method',
-        'implement':      'do',
-        'comprehensive':  'complete'
+        'utilize':'use','commence':'start','terminate':'end','endeavor':'try','facilitate':'help',
+        'demonstrate':'show','subsequently':'later','sufficient':'enough','numerous':'many',
+        'fundamental':'basic','approximately':'about','consequently':'so','ascertain':'find out',
+        'expedite':'speed up','optimal':'best','paradigm':'model','leverage':'use',
+        'methodology':'method','implement':'do','comprehensive':'complete'
     };
 
-    /* =========================================================
-       UTILITIES
-       ========================================================= */
+    /* ============ AI-FINGERPRINT PHRASES (humanizer) ============
+       Mapped to natural human-ish replacements. */
+    const AI_PHRASES = {
+        // Common AI buzzwords
+        'delve into':           'look at',
+        'delve':                'look',
+        'delves':               'looks',
+        'tapestry of':          'mix of',
+        'a rich tapestry':      'a mix',
+        'tapestry':             'mix',
+        'navigate the landscape': 'deal with',
+        'in the realm of':      'in',
+        'in the world of':      'in',
+        'myriad of':            'many',
+        'a myriad of':          'many',
+        'a plethora of':        'many',
+        'plethora':             'lots',
+        'embark on':            'start',
+        'embark upon':          'start',
+        'leveraging':           'using',
+        'leverage':             'use',
+        'utilizes':             'uses',
+        'utilizing':            'using',
+        'underscores':          'shows',
+        'underscore':           'show',
+        'showcase':             'show',
+        'showcasing':           'showing',
+        'showcases':            'shows',
+        'elucidate':            'explain',
+        'elucidating':          'explaining',
+        'synergy':              'teamwork',
+        'paradigm shift':       'big change',
+        'paradigm':             'model',
+        'holistic':             'overall',
+        'robust':               'strong',
+        'comprehensive':        'complete',
+        'meticulously':         'carefully',
+        'intricate':            'complex',
+        'pivotal':              'key',
+        'multifaceted':         'many-sided',
+        'in essence':           'basically',
+        'it is important to note that': '',
+        "it's important to note that":  '',
+        'it is worth noting that':      '',
+        "it's worth noting that":       '',
+        'it should be noted that':      '',
+        'needless to say,':     '',
+        'as such,':             'so,',
+        'as a result,':         'so,',
+        'consequently,':        'so,',
+        'furthermore,':         'also,',
+        'moreover,':            'also,',
+        'in conclusion,':       'so,',
+        'to summarize,':        'in short,',
+        'in summary,':          'in short,',
+        'in order to':          'to',
+        'due to the fact that': 'because',
+        'at this point in time': 'now',
+        'a large number of':    'many',
+        'in the event that':    'if',
+        'on the other hand,':   'but,',
+        'with regard to':       'about',
+        'in terms of':          'for',
+        'first and foremost':   'first'
+    };
 
+    /* AI-style boilerplate sentence patterns we delete outright */
+    const AI_BOILERPLATE_RE = [
+        /^\s*(Sure|Of course|Certainly|Absolutely|Indeed)[!,.]?\s+(here[''']s|here is|I[''']?d be (?:happy|glad)|let me).*?[.!?]\s*/i,
+        /^\s*I hope (this|that) helps[!.].*?\s*/i,
+        /^\s*Feel free to (ask|let me know).*?[.!?]\s*/i,
+        /^\s*Let me know if (you|there).*?[.!?]\s*/i,
+        /^\s*(In conclusion|To summarize|To conclude|Overall),?\s*/i,
+        /^\s*As an AI( language)? model,?\s*[^.!?]*[.!?]\s*/i,
+        /^\s*Disclaimer:?\s*[^.!?]*[.!?]\s*/i,
+        /^\s*Please note that\s*/i,
+        /^\s*Remember,?\s+/i
+    ];
+
+    /* Contractions (forward) */
+    const CONTRACT_FWD = {
+        'do not':"don't",'does not':"doesn't",'did not':"didn't",
+        'is not':"isn't",'are not':"aren't",'was not':"wasn't",'were not':"weren't",
+        'have not':"haven't",'has not':"hasn't",'had not':"hadn't",
+        'will not':"won't",'would not':"wouldn't",'should not':"shouldn't",'could not':"couldn't",
+        'cannot':"can't",'can not':"can't",
+        'I am':"I'm",'you are':"you're",'we are':"we're",'they are':"they're",
+        'it is':"it's",'that is':"that's",'there is':"there's",'who is':"who's",
+        'I have':"I've",'you have':"you've",'we have':"we've",'they have':"they've",
+        'I will':"I'll",'you will':"you'll",'we will':"we'll",'they will':"they'll",
+        'I would':"I'd",'you would':"you'd",'we would':"we'd",'they would':"they'd"
+    };
+
+    const FILLERS = ['honestly,', 'actually,', 'I mean,', 'well,', 'kinda', 'sort of', 'basically,', 'you know,'];
+
+    /* ============ INVISIBLE / SMART PUNCT MAPS ============ */
+    const INVISIBLE_RE = /[​‌‍⁠­﻿᠎]/g;
+    const SMART_MAP = {
+        '“':'"','”':'"','„':'"','‟':'"',
+        '‘':"'",'’':"'",'‚':"'",'‛':"'",
+        '–':'-','—':'-',
+        '…':'...',
+        ' ':' '
+    };
+    const SMART_RE = new RegExp('[' + Object.keys(SMART_MAP).join('') + ']', 'g');
+
+    /* ============ UTILS ============ */
     const chance     = (p) => Math.random() < p;
     const pickRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
+    const escapeRegex = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
     function downloadBlob(blob, filename) {
         const url = URL.createObjectURL(blob);
         const a   = document.createElement('a');
-        a.href    = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+        a.href    = url; a.download = filename;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
         URL.revokeObjectURL(url);
     }
 
-    /* =========================================================
-       TOAST SYSTEM (Sonner-inspired)
-       ========================================================= */
-    let toastSeq = 0;
-    function toast(message, type = 'info', duration = 3500) {
-        const id = ++toastSeq;
+    /* ============ TOAST ============ */
+    function toast(message, type='info', duration=3500) {
         const el = document.createElement('div');
         el.className = `toast toast-${type}`;
-        el.setAttribute('data-id', id);
-        const iconChar = { success: '✓', error: '!', warning: '!', info: 'i' }[type] || 'i';
-        el.innerHTML = `
-            <span class="toast-icon">${iconChar}</span>
-            <span class="toast-msg"></span>
-            <button class="close" aria-label="Dismiss">✕</button>`;
+        const icon = { success:'✓', error:'!', warning:'!', info:'i' }[type] || 'i';
+        el.innerHTML = `<span class="toast-icon">${icon}</span><span class="toast-msg"></span><button class="close">✕</button>`;
         el.querySelector('.toast-msg').textContent = message;
         el.querySelector('.close').addEventListener('click', () => dismissToast(el));
         toastContainer.appendChild(el);
-        // Trigger animation
         requestAnimationFrame(() => el.classList.add('show'));
-        // Auto-dismiss
-        const timer = setTimeout(() => dismissToast(el), duration);
-        el.addEventListener('mouseenter', () => clearTimeout(timer));
-        return el;
+        const t = setTimeout(() => dismissToast(el), duration);
+        el.addEventListener('mouseenter', () => clearTimeout(t));
     }
     function dismissToast(el) {
         if (!el || !el.parentNode) return;
-        el.classList.remove('show');
-        el.classList.add('hide');
+        el.classList.remove('show'); el.classList.add('hide');
         setTimeout(() => el.remove(), 400);
     }
 
-    /* =========================================================
-       UNDO / REDO HISTORY STACK
-       ========================================================= */
-    const history = { stack: [], idx: -1, suppress: false };
-    const HISTORY_LIMIT = 50;
+    /* ============ HISTORY (Undo / Redo) ============ */
+    const history = { stack:[], idx:-1, suppress:false };
+    const HISTORY_LIMIT = 60;
 
-    function pushHistory(label = '') {
+    function pushHistory(label='') {
         if (history.suppress) return;
-        // Truncate any redo branch
         history.stack = history.stack.slice(0, history.idx + 1);
-        const snapshot = { html: preview.innerHTML, label };
-        // Skip if identical to top
-        if (history.stack.length && history.stack[history.stack.length - 1].html === snapshot.html) return;
-        history.stack.push(snapshot);
+        const snap = { html: preview.innerHTML, label };
+        if (history.stack.length && history.stack[history.stack.length-1].html === snap.html) return;
+        history.stack.push(snap);
         if (history.stack.length > HISTORY_LIMIT) history.stack.shift();
         history.idx = history.stack.length - 1;
         updateUndoRedoButtons();
     }
     function undo() {
         if (history.idx <= 0) return;
-        history.idx--;
-        applyHistorySnapshot();
-        toast('Undone', 'info', 1500);
+        history.idx--; applyHistorySnapshot(); toast('Undone', 'info', 1500);
     }
     function redo() {
         if (history.idx >= history.stack.length - 1) return;
-        history.idx++;
-        applyHistorySnapshot();
-        toast('Redone', 'info', 1500);
+        history.idx++; applyHistorySnapshot(); toast('Redone', 'info', 1500);
     }
     function applyHistorySnapshot() {
         history.suppress = true;
@@ -1101,15 +1832,10 @@
         undoBtn.disabled = history.idx <= 0;
         redoBtn.disabled = history.idx >= history.stack.length - 1;
     }
-
     undoBtn.addEventListener('click', undo);
     redoBtn.addEventListener('click', redo);
 
-    /* =========================================================
-       SELECTION HELPERS
-       ========================================================= */
-
-    /** Return the current Range if selection is non-empty AND inside preview. */
+    /* ============ SELECTION HELPERS ============ */
     function getPreviewSelectionRange() {
         const sel = window.getSelection();
         if (!sel || sel.rangeCount === 0 || sel.toString().trim() === '') return null;
@@ -1117,14 +1843,12 @@
         if (!preview.contains(range.commonAncestorContainer)) return null;
         return range;
     }
-
-    /** Collect text nodes under root (skipping script/style). */
     function collectTextNodes(root) {
         const nodes = [];
         const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
-            acceptNode: (node) => {
-                if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
-                const tag = node.parentNode && node.parentNode.tagName;
+            acceptNode: (n) => {
+                if (!n.nodeValue || !n.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+                const tag = n.parentNode && n.parentNode.tagName;
                 if (tag === 'SCRIPT' || tag === 'STYLE') return NodeFilter.FILTER_REJECT;
                 return NodeFilter.FILTER_ACCEPT;
             }
@@ -1132,37 +1856,37 @@
         let n; while ((n = walker.nextNode())) nodes.push(n);
         return nodes;
     }
-
-    /** Collect text nodes that intersect a Range (for selection-scoped operations). */
     function collectTextNodesInRange(range) {
         if (!range) return [];
-        // If selection is inside a single text node, just return that one.
         if (range.startContainer === range.endContainer && range.startContainer.nodeType === Node.TEXT_NODE) {
             return [range.startContainer];
         }
         const root = range.commonAncestorContainer.nodeType === Node.TEXT_NODE
             ? range.commonAncestorContainer.parentNode
             : range.commonAncestorContainer;
-        const all = collectTextNodes(root);
-        return all.filter(node => range.intersectsNode(node));
+        return collectTextNodes(root).filter(node => range.intersectsNode(node));
     }
-
-    /** Update the scope hint shown beneath imperfections / paraphrase. */
     function refreshScopeHints() {
         const sel = window.getSelection();
-        const hasSel = sel && sel.rangeCount > 0 && sel.toString().trim() !== '' && preview.contains(sel.getRangeAt(0).commonAncestorContainer);
-        const len = hasSel ? sel.toString().length : 0;
-        const msg = hasSel
-            ? `Scope: selection (${len} chars)`
-            : 'Scope: entire document';
+        const has = sel && sel.rangeCount > 0 && sel.toString().trim() !== '' && preview.contains(sel.getRangeAt(0).commonAncestorContainer);
+        const len = has ? sel.toString().length : 0;
+        const msg = has ? `Scope: selection (${len} chars)` : 'Scope: entire document';
         imperfectionScope.textContent = msg;
-        paraphraseScope.textContent   = msg;
+        paraphraseScope.textContent = msg;
+        humanizeScope.textContent = msg;
+        toneScope.textContent = msg;
     }
     document.addEventListener('selectionchange', refreshScopeHints);
 
-    /* =========================================================
-       1. DOCUMENT PARSING (mammoth)
-       ========================================================= */
+    /* ============ MODULE COLLAPSE ============ */
+    document.querySelectorAll('.module-head').forEach(head => {
+        head.addEventListener('click', (e) => {
+            // Only collapse if user clicks the header itself, not interactive children inside the body
+            head.parentElement.classList.toggle('open');
+        });
+    });
+
+    /* ============ DOC PARSING (mammoth) ============ */
     async function parseDocxFile(file) {
         if (!file.name.toLowerCase().endsWith('.docx')) {
             toast('Please upload a valid .docx file.', 'error');
@@ -1178,7 +1902,7 @@
                     "p[style-name='Title']     => h1.title:fresh",
                     "p[style-name='Subtitle']  => h2.subtitle:fresh",
                     "p[style-name='Quote']     => blockquote:fresh",
-                    "b => strong", "i => em", "u => u"
+                    "b => strong","i => em","u => u"
                 ],
                 includeDefaultStyleMap: true
             };
@@ -1187,95 +1911,169 @@
             preview.classList.remove('empty');
             history.stack = []; history.idx = -1;
             pushHistory('opened ' + file.name);
+            // Use the docx filename (without extension) as the title
+            const baseName = file.name.replace(/\.docx$/i, '');
+            docTitle.value = baseName;
             updateStats();
             toast(`Loaded "${file.name}"`, 'success');
-            if (result.messages.length > 0) console.warn('mammoth messages:', result.messages);
+            if (result.messages.length) console.warn('mammoth messages:', result.messages);
         } catch (err) {
             console.error(err);
             toast('Failed to parse .docx: ' + err.message, 'error', 6000);
         }
     }
-
     fileInput.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (file) await parseDocxFile(file);
         fileInput.value = '';
     });
 
-    /* =========================================================
-       Drag-and-drop file upload
-       ========================================================= */
+    /* ============ DRAG & DROP ============ */
     let dragDepth = 0;
     window.addEventListener('dragenter', (e) => {
         if (!e.dataTransfer || !Array.from(e.dataTransfer.types).includes('Files')) return;
-        dragDepth++;
-        dropOverlay.classList.add('show');
+        dragDepth++; dropOverlay.classList.add('show');
     });
-    window.addEventListener('dragover', (e) => { e.preventDefault(); });
+    window.addEventListener('dragover', (e) => e.preventDefault());
     window.addEventListener('dragleave', () => {
         dragDepth = Math.max(0, dragDepth - 1);
         if (dragDepth === 0) dropOverlay.classList.remove('show');
     });
     window.addEventListener('drop', async (e) => {
-        e.preventDefault();
-        dragDepth = 0;
-        dropOverlay.classList.remove('show');
+        e.preventDefault(); dragDepth = 0; dropOverlay.classList.remove('show');
         const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
         if (file) await parseDocxFile(file);
     });
 
-    /* =========================================================
-       EXPORT — .txt / .html / .docx
-       ========================================================= */
-    function exportAs(fmt) {
+    /* ============ EXPORT — txt / html / docx / pdf / md ============ */
+    function sanitizeFileName(s) {
+        return (s || 'document').replace(/[\/\\?%*:|"<>]/g, '_').trim() || 'document';
+    }
+
+    function htmlToMarkdown(html) {
+        // Lightweight HTML→Markdown for basic structure.
+        const tmp = document.createElement('div'); tmp.innerHTML = html;
+        function walk(node) {
+            if (node.nodeType === Node.TEXT_NODE) return node.nodeValue;
+            if (node.nodeType !== Node.ELEMENT_NODE) return '';
+            const tag = node.tagName.toLowerCase();
+            const inner = Array.from(node.childNodes).map(walk).join('');
+            switch (tag) {
+                case 'h1': return `\n# ${inner.trim()}\n\n`;
+                case 'h2': return `\n## ${inner.trim()}\n\n`;
+                case 'h3': return `\n### ${inner.trim()}\n\n`;
+                case 'p':  return `${inner}\n\n`;
+                case 'br': return '\n';
+                case 'strong': case 'b': return `**${inner}**`;
+                case 'em': case 'i': return `*${inner}*`;
+                case 'u': return `__${inner}__`;
+                case 'li': return `- ${inner}\n`;
+                case 'ul': case 'ol': return `\n${inner}\n`;
+                case 'blockquote': return `\n> ${inner.trim().replace(/\n/g, '\n> ')}\n\n`;
+                case 'a': return `[${inner}](${node.getAttribute('href') || ''})`;
+                case 'table': {
+                    const rows = Array.from(node.querySelectorAll('tr'));
+                    return '\n' + rows.map((row, i) => {
+                        const cells = Array.from(row.children).map(c => c.innerText.trim()).join(' | ');
+                        if (i === 0) {
+                            const sep = Array.from(row.children).map(() => '---').join(' | ');
+                            return `| ${cells} |\n| ${sep} |`;
+                        }
+                        return `| ${cells} |`;
+                    }).join('\n') + '\n\n';
+                }
+                default: return inner;
+            }
+        }
+        return walk(tmp).replace(/\n{3,}/g, '\n\n').trim() + '\n';
+    }
+
+    async function performExport(fmt, filename) {
         const text = preview.innerText || '';
         const html = preview.innerHTML || '';
         if (!text.trim()) { toast('Nothing to export — preview is empty.', 'warning'); return; }
+        const safeName = sanitizeFileName(filename);
 
         if (fmt === 'txt') {
-            downloadBlob(new Blob([text], { type: 'text/plain;charset=utf-8' }), 'document.txt');
-            toast('Downloaded document.txt', 'success');
+            downloadBlob(new Blob([text], { type: 'text/plain;charset=utf-8' }), `${safeName}.txt`);
+        } else if (fmt === 'md') {
+            const md = htmlToMarkdown(html);
+            downloadBlob(new Blob([md], { type: 'text/markdown;charset=utf-8' }), `${safeName}.md`);
         } else if (fmt === 'html') {
-            const full = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Exported</title></head><body>${html}</body></html>`;
-            downloadBlob(new Blob([full], { type: 'text/html;charset=utf-8' }), 'document.html');
-            toast('Downloaded document.html', 'success');
+            const full = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${safeName}</title></head><body>${html}</body></html>`;
+            downloadBlob(new Blob([full], { type: 'text/html;charset=utf-8' }), `${safeName}.html`);
         } else if (fmt === 'docx') {
-            if (typeof window.htmlDocx === 'undefined') {
-                toast('html-docx-js library not loaded.', 'error');
-                return;
-            }
-            const docHtml = `
-                <!DOCTYPE html>
-                <html xmlns:o="urn:schemas-microsoft-com:office:office"
-                      xmlns:w="urn:schemas-microsoft-com:office:word"
-                      xmlns="http://www.w3.org/TR/REC-html40">
-                <head>
-                    <meta charset="UTF-8">
-                    <style>
-                        body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; }
-                        table { border-collapse: collapse; margin: 8pt 0; }
-                        table td, table th { border: 1px solid #888; padding: 4pt 8pt; vertical-align: top; }
-                        table th { background: #f1f5f9; font-weight: bold; }
-                        h1 { font-size: 18pt; } h2 { font-size: 14pt; } h3 { font-size: 12pt; }
-                        blockquote { border-left: 3px solid #ccc; padding-left: 8pt; color: #555; }
-                        img { max-width: 100%; }
-                    </style>
-                </head>
-                <body>${html}</body>
-                </html>`;
+            if (typeof window.htmlDocx === 'undefined') { toast('html-docx-js not loaded.', 'error'); return; }
+            const docHtml = `<!DOCTYPE html><html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="UTF-8"><style>
+                body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; }
+                table { border-collapse: collapse; margin: 8pt 0; }
+                table td, table th { border: 1px solid #888; padding: 4pt 8pt; vertical-align: top; }
+                table th { background: #f1f5f9; font-weight: bold; }
+                h1 { font-size: 18pt; } h2 { font-size: 14pt; } h3 { font-size: 12pt; }
+                blockquote { border-left: 3px solid #ccc; padding-left: 8pt; color: #555; }
+                img { max-width: 100%; }
+            </style></head><body>${html}</body></html>`;
             try {
                 const blob = window.htmlDocx.asBlob(docHtml, { orientation: 'portrait', margins: { top: 720 } });
-                if (typeof window.saveAs === 'function') window.saveAs(blob, 'document.docx');
-                else downloadBlob(blob, 'document.docx');
-                toast('Downloaded document.docx', 'success');
-            } catch (err) {
-                console.error(err);
-                toast('Failed to build .docx: ' + err.message, 'error', 6000);
-            }
+                if (typeof window.saveAs === 'function') window.saveAs(blob, `${safeName}.docx`);
+                else downloadBlob(blob, `${safeName}.docx`);
+            } catch (err) { console.error(err); toast('Failed to build .docx: ' + err.message, 'error'); return; }
+        } else if (fmt === 'pdf') {
+            if (typeof window.html2pdf === 'undefined') { toast('html2pdf not loaded.', 'error'); return; }
+            // Render the preview content (light theme styling) into a hidden node so PDF looks clean
+            const wrap = document.createElement('div');
+            wrap.style.cssText = 'padding:32px 40px;font-family:Inter,Arial,sans-serif;color:#111;background:white;font-size:13px;line-height:1.6;';
+            wrap.innerHTML = `<style>
+                table{border-collapse:collapse;margin:10px 0}
+                table td,table th{border:1px solid #ccc;padding:6px 10px}
+                table th{background:#f3f4f6}
+                h1{font-size:22px;margin:16px 0 8px}h2{font-size:18px;margin:14px 0 6px}h3{font-size:15px;margin:12px 0 6px}
+                blockquote{border-left:3px solid #ccc;padding-left:10px;color:#555;margin:10px 0}
+                ul,ol{margin:6px 0 10px 24px}
+                p{margin:0 0 10px}
+            </style>${html}`;
+            document.body.appendChild(wrap);
+            try {
+                await window.html2pdf().set({
+                    margin:        [10, 12, 10, 12],
+                    filename:      `${safeName}.pdf`,
+                    image:         { type:'jpeg', quality:0.96 },
+                    html2canvas:   { scale: 2, useCORS: true, backgroundColor:'#ffffff' },
+                    jsPDF:         { unit:'mm', format:'a4', orientation:'portrait' },
+                    pagebreak:     { mode: ['avoid-all', 'css', 'legacy'] }
+                }).from(wrap).save();
+            } catch (err) { console.error(err); toast('PDF failed: ' + err.message, 'error', 6000); }
+            finally { wrap.remove(); }
         }
+        toast(`Downloaded ${safeName}.${fmt}`, 'success');
     }
 
-    // Download dropdown
+    /* ============ FILENAME MODAL ============ */
+    function openFilenameModal(presetFmt) {
+        const base = sanitizeFileName(docTitle.value || 'document');
+        fileNameInput.value = base;
+        fileFormatSelect.value = presetFmt || 'docx';
+        filenameModal.classList.add('show');
+        setTimeout(() => { fileNameInput.focus(); fileNameInput.select(); }, 100);
+    }
+    function closeFilenameModal() { filenameModal.classList.remove('show'); }
+
+    filenameCancelBtn.addEventListener('click', closeFilenameModal);
+    filenameCloseBtn.addEventListener('click', closeFilenameModal);
+    filenameModal.addEventListener('click', (e) => { if (e.target === filenameModal) closeFilenameModal(); });
+    filenameConfirmBtn.addEventListener('click', async () => {
+        const name = fileNameInput.value || 'document';
+        const fmt  = fileFormatSelect.value;
+        closeFilenameModal();
+        filenameConfirmBtn.disabled = true;
+        await performExport(fmt, name);
+        filenameConfirmBtn.disabled = false;
+    });
+    fileNameInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); filenameConfirmBtn.click(); }
+    });
+
+    /* Wire the download menu — each option opens the filename modal pre-filled */
     downloadMenuBtn.addEventListener('click', (e) => {
         e.stopPropagation();
         downloadMenu.classList.toggle('show');
@@ -1283,87 +2081,65 @@
     downloadMenu.addEventListener('click', (e) => {
         const btn = e.target.closest('button[data-fmt]');
         if (!btn) return;
-        exportAs(btn.dataset.fmt);
         downloadMenu.classList.remove('show');
+        openFilenameModal(btn.dataset.fmt);
     });
     document.addEventListener('click', () => downloadMenu.classList.remove('show'));
 
-    /* =========================================================
-       2. ORGANIC IMPERFECTION INJECTION (selection-aware)
-       ========================================================= */
+    /* ============ IMPERFECTIONS ============ */
     intensity.addEventListener('input', () => { intensityValue.textContent = intensity.value; });
+    humanizeIntensity.addEventListener('input', () => { humanizeIntensityValue.textContent = humanizeIntensity.value; });
 
-    function flipFirstCase(word) {
-        if (!word) return word;
-        const first = word[0];
-        if (first === first.toUpperCase() && first !== first.toLowerCase())
-            return first.toLowerCase() + word.slice(1);
-        if (first === first.toLowerCase() && first !== first.toUpperCase())
-            return first.toUpperCase() + word.slice(1);
-        return word;
+    function flipFirstCase(w) {
+        if (!w) return w;
+        const f = w[0];
+        if (f === f.toUpperCase() && f !== f.toLowerCase()) return f.toLowerCase() + w.slice(1);
+        if (f === f.toLowerCase() && f !== f.toUpperCase()) return f.toUpperCase() + w.slice(1);
+        return w;
     }
-    function swapArticle(word) {
-        const lower = word.toLowerCase();
-        const articles = ['a', 'an', 'the'];
-        if (!articles.includes(lower)) return word;
-        const replacement = pickRandom(articles.filter(a => a !== lower));
-        return word[0] === word[0].toUpperCase()
-            ? replacement[0].toUpperCase() + replacement.slice(1)
-            : replacement;
+    function swapArticle(w) {
+        const lower = w.toLowerCase();
+        const A = ['a','an','the'];
+        if (!A.includes(lower)) return w;
+        const r = pickRandom(A.filter(x => x !== lower));
+        return w[0] === w[0].toUpperCase() ? r[0].toUpperCase() + r.slice(1) : r;
     }
-    function transposeLetters(word) {
-        const m = word.match(/^(\W*)([A-Za-z]+)(\W*)$/);
-        if (!m) return word;
+    function transposeLetters(w) {
+        const m = w.match(/^(\W*)([A-Za-z]+)(\W*)$/);
+        if (!m) return w;
         const [, lead, core, trail] = m;
-        if (core.length <= 4) return word;
+        if (core.length <= 4) return w;
         const i = 1 + Math.floor(Math.random() * (core.length - 3));
-        const arr = core.split('');
-        [arr[i], arr[i+1]] = [arr[i+1], arr[i]];
-        return lead + arr.join('') + trail;
+        const a = core.split('');
+        [a[i], a[i+1]] = [a[i+1], a[i]];
+        return lead + a.join('') + trail;
     }
-    function driftPunctuation(text) {
-        // Sometimes turn period into comma, or vice-versa
-        return text
-            .replace(/\.(\s)/g, (m, ws) => chance(0.2) ? ',' + ws : m)
-            .replace(/,(\s)/g, (m, ws) => chance(0.15) ? '.' + ws.replace(/^\s+/, ' ') : m);
+    function driftPunctuation(t) {
+        return t.replace(/\.(\s)/g, (m, w) => chance(0.2) ? ',' + w : m)
+                .replace(/,(\s)/g, (m, w) => chance(0.15) ? '.' + w.replace(/^\s+/,' ') : m);
     }
-    function injectDoubleSpaces(text) {
-        return text.replace(/ /g, (m) => chance(0.05) ? '  ' : m);
+    function injectDoubleSpaces(t) {
+        return t.replace(/ /g, (m) => chance(0.05) ? '  ' : m);
     }
 
-    /** Apply imperfections to a list of text nodes. */
-    function applyImperfectionsTo(textNodes) {
-        const probability = parseInt(intensity.value, 10) / 100;
-        const doCap   = capVariance.checked;
-        const doArt   = articleSwap.checked;
-        const doTrans = transposition.checked;
-        const doPunct = punctuationDrift.checked;
-        const doSpace = doubleSpace.checked;
-
+    function applyImperfectionsTo(nodes) {
+        const p = parseInt(intensity.value, 10) / 100;
         let mutated = 0;
-        textNodes.forEach(node => {
-            let value = node.nodeValue;
-
-            if (doPunct && chance(probability)) value = driftPunctuation(value);
-            if (doSpace && chance(probability)) value = injectDoubleSpaces(value);
-
-            const tokens = value.split(/(\s+)/);
-            for (let i = 0; i < tokens.length; i++) {
-                const tok = tokens[i];
-                if (!tok || /^\s+$/.test(tok)) continue;
-                let newTok = tok;
-                if (doArt && chance(probability)) {
-                    const s = swapArticle(newTok); if (s !== newTok) { newTok = s; mutated++; }
-                }
-                if (doCap && chance(probability)) {
-                    const s = flipFirstCase(newTok); if (s !== newTok) { newTok = s; mutated++; }
-                }
-                if (doTrans && chance(probability)) {
-                    const s = transposeLetters(newTok); if (s !== newTok) { newTok = s; mutated++; }
-                }
-                tokens[i] = newTok;
+        nodes.forEach(node => {
+            let v = node.nodeValue;
+            if (punctuationDrift.checked && chance(p)) v = driftPunctuation(v);
+            if (doubleSpace.checked && chance(p))      v = injectDoubleSpaces(v);
+            const toks = v.split(/(\s+)/);
+            for (let i = 0; i < toks.length; i++) {
+                const t = toks[i];
+                if (!t || /^\s+$/.test(t)) continue;
+                let nt = t;
+                if (articleSwap.checked && chance(p))    { const s = swapArticle(nt); if (s !== nt) { nt = s; mutated++; } }
+                if (capVariance.checked && chance(p))    { const s = flipFirstCase(nt); if (s !== nt) { nt = s; mutated++; } }
+                if (transposition.checked && chance(p))  { const s = transposeLetters(nt); if (s !== nt) { nt = s; mutated++; } }
+                toks[i] = nt;
             }
-            node.nodeValue = tokens.join('');
+            node.nodeValue = toks.join('');
         });
         return mutated;
     }
@@ -1372,151 +2148,173 @@
         if (!preview.innerText.trim()) { toast('Preview is empty.', 'warning'); return; }
         if (!capVariance.checked && !articleSwap.checked && !transposition.checked &&
             !punctuationDrift.checked && !doubleSpace.checked) {
-            toast('Enable at least one variation type.', 'warning');
-            return;
+            toast('Enable at least one variation type.', 'warning'); return;
         }
-
         const range = getPreviewSelectionRange();
         const scope = range ? 'selection' : 'document';
-        const targetNodes = range
-            ? collectTextNodesInRange(range)
-            : collectTextNodes(preview);
-
-        const mutated = applyImperfectionsTo(targetNodes);
+        const nodes = range ? collectTextNodesInRange(range) : collectTextNodes(preview);
+        const m = applyImperfectionsTo(nodes);
         pushHistory('imperfections (' + scope + ')');
         updateStats();
         if (highlightComplex.checked) applyComplexHighlighting();
-        toast(`Applied ${mutated} variation${mutated === 1 ? '' : 's'} to ${scope}.`, 'success');
+        toast(`Applied ${m} variation${m === 1 ? '' : 's'} to ${scope}.`, 'success');
     });
 
-    /* =========================================================
-       3. PARAPHRASE (selection-aware, mock async)
-       Replace the mock with a real API call to swap.
-       ========================================================= */
-    async function paraphraseText(text, style = 'standard') {
-        // Mock latency
-        await new Promise(r => setTimeout(r, 600));
-
-        // Synonym substitution dictionary used by all styles
+    /* ============ PARAPHRASE (mock async; replace body for real API) ============ */
+    async function paraphraseText(text, style='standard') {
+        await new Promise(r => setTimeout(r, 500));
         const SYN = {
-            standard: {
-                'use': 'employ', 'make': 'create', 'show': 'display', 'big': 'large',
-                'small': 'minor', 'help': 'assist', 'start': 'begin', 'end': 'conclude',
-                'get': 'obtain', 'find': 'discover', 'think': 'believe', 'important': 'crucial'
-            },
-            formal: {
-                "can't": 'cannot', "don't": 'do not', "won't": 'will not', "it's": 'it is',
-                'get': 'obtain', 'use': 'utilize', 'start': 'commence', 'help': 'facilitate',
-                'show': 'demonstrate', 'end': 'terminate', 'big': 'substantial', 'small': 'modest'
-            },
-            casual: {
-                'cannot': "can't", 'do not': "don't", 'will not': "won't", 'it is': "it's",
-                'utilize': 'use', 'commence': 'start', 'facilitate': 'help',
-                'demonstrate': 'show', 'terminate': 'end', 'substantial': 'big'
-            },
-            concise: {
-                'in order to': 'to', 'due to the fact that': 'because',
-                'at this point in time': 'now', 'a large number of': 'many',
-                'in the event that': 'if', 'utilize': 'use', 'commence': 'start',
-                'approximately': 'about'
-            }
+            standard: {'use':'employ','make':'create','show':'display','big':'large','small':'minor','help':'assist','start':'begin','end':'conclude','get':'obtain','find':'discover','think':'believe','important':'crucial'},
+            formal:   {"can't":'cannot',"don't":'do not',"won't":'will not',"it's":'it is','get':'obtain','use':'utilize','start':'commence','help':'facilitate','show':'demonstrate','end':'terminate','big':'substantial','small':'modest'},
+            casual:   {'cannot':"can't",'do not':"don't",'will not':"won't",'it is':"it's",'utilize':'use','commence':'start','facilitate':'help','demonstrate':'show','terminate':'end','substantial':'big'},
+            concise:  {'in order to':'to','due to the fact that':'because','at this point in time':'now','a large number of':'many','in the event that':'if','utilize':'use','commence':'start','approximately':'about'}
         };
         const dict = SYN[style] || SYN.standard;
-        let result = text;
+        let r = text;
         Object.entries(dict).forEach(([from, to]) => {
-            const re = new RegExp('\\b' + from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi');
-            result = result.replace(re, to);
+            r = r.replace(new RegExp('\\b' + escapeRegex(from) + '\\b', 'gi'), to);
         });
-
-        // Sentence-level rearrangement: split, optionally rephrase 30% of sentences
-        const sentences = result.match(/[^.!?]+[.!?]+|\S[^.!?]*$/g) || [result];
-        const rewritten = sentences.map(s => {
-            const trimmed = s.trim();
-            if (!trimmed) return s;
-            if (!chance(0.3)) return s;
-
-            // Try a structural twist depending on style
+        const sentences = r.match(/[^.!?]+[.!?]+|\S[^.!?]*$/g) || [r];
+        return sentences.map(s => {
+            const trim = s.trim();
+            if (!trim || !chance(0.3)) return s;
             if (style === 'concise') return s.replace(/^\s*The\s+/i, '');
-            if (style === 'formal' && /^I\s/i.test(trimmed))
-                return s.replace(/^I\s+/i, 'One may ');
-            if (style === 'casual' && /^However,?\s/i.test(trimmed))
-                return s.replace(/^However,?\s+/i, 'But ');
-            if (trimmed.includes(',')) {
+            if (style === 'formal' && /^I\s/i.test(trim)) return s.replace(/^I\s+/i, 'One may ');
+            if (style === 'casual' && /^However,?\s/i.test(trim)) return s.replace(/^However,?\s+/i, 'But ');
+            if (trim.includes(',')) {
                 const idx = s.indexOf(',');
                 const left = s.slice(0, idx).trim();
                 const right = s.slice(idx + 1).trim().replace(/[.!?]+$/, '');
                 if (left && right) return `${right.charAt(0).toUpperCase() + right.slice(1)}, ${left.charAt(0).toLowerCase() + left.slice(1)}.`;
             }
             return s;
-        });
-        return rewritten.join('');
+        }).join('');
+    }
 
-        /* ---- To swap in a real API later ----
-        const res = await fetch('/api/paraphrase', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ text, style })
-        });
-        const data = await res.json();
-        return data.rewritten;
-        */
+    async function runOnTextNodes(asyncFn, range, label) {
+        const nodes = range ? collectTextNodesInRange(range) : collectTextNodes(preview);
+        if (range) {
+            const original = range.toString();
+            const rewritten = await asyncFn(original);
+            range.deleteContents();
+            const wrap = document.createElement('span');
+            wrap.className = 'pulse-highlight'; wrap.textContent = rewritten;
+            range.insertNode(wrap);
+            setTimeout(() => {
+                if (wrap.parentNode) {
+                    wrap.parentNode.replaceChild(document.createTextNode(wrap.textContent), wrap);
+                    preview.normalize();
+                }
+            }, 1300);
+            window.getSelection().removeAllRanges();
+        } else {
+            for (const node of nodes) node.nodeValue = await asyncFn(node.nodeValue);
+        }
+        pushHistory(label);
     }
 
     paraphraseBtn.addEventListener('click', async () => {
         if (!preview.innerText.trim()) { toast('Preview is empty.', 'warning'); return; }
         const range = getPreviewSelectionRange();
         const style = paraphraseStyle.value;
-
         paraphraseBtn.disabled = true;
-        const originalLabel = paraphraseBtn.innerHTML;
+        const orig = paraphraseBtn.innerHTML;
         paraphraseBtn.innerHTML = '<span class="spinner"></span> Paraphrasing…';
-
         try {
-            if (range) {
-                // Selection only — preserve surrounding markup
-                const original = range.toString();
-                const rewritten = await paraphraseText(original, style);
-                range.deleteContents();
-                const wrapper = document.createElement('span');
-                wrapper.className = 'pulse-highlight';
-                wrapper.textContent = rewritten;
-                range.insertNode(wrapper);
-                // Unwrap span after animation finishes (keeps DOM clean)
-                setTimeout(() => {
-                    if (wrapper.parentNode) {
-                        const t = document.createTextNode(wrapper.textContent);
-                        wrapper.parentNode.replaceChild(t, wrapper);
-                        preview.normalize();
-                    }
-                }, 1300);
-                window.getSelection().removeAllRanges();
-                pushHistory('paraphrase (selection)');
-                toast(`Paraphrased selection (${style})`, 'success');
-            } else {
-                // Whole document — process text nodes in place
-                const nodes = collectTextNodes(preview);
-                for (const node of nodes) {
-                    node.nodeValue = await paraphraseText(node.nodeValue, style);
-                }
-                pushHistory('paraphrase (document)');
-                toast(`Paraphrased document (${style})`, 'success');
-            }
+            await runOnTextNodes((t) => paraphraseText(t, style), range, 'paraphrase (' + (range?'selection':'document') + ')');
             updateStats();
             if (highlightComplex.checked) applyComplexHighlighting();
-        } catch (err) {
-            console.error(err);
-            toast('Paraphrase failed: ' + err.message, 'error', 6000);
-        } finally {
-            paraphraseBtn.disabled = false;
-            paraphraseBtn.innerHTML = originalLabel;
-        }
+            toast(`Paraphrased ${range ? 'selection' : 'document'} (${style})`, 'success');
+        } catch (err) { console.error(err); toast('Paraphrase failed: ' + err.message, 'error'); }
+        finally { paraphraseBtn.disabled = false; paraphraseBtn.innerHTML = orig; }
     });
 
-    /* =========================================================
-       4. TONE & COMPLEX WORDS
-       ========================================================= */
+    /* ============ HUMANIZE ============ */
+    function humanizeText(text) {
+        let r = text;
+
+        // 1. Invisible Unicode (zero-width, BOM, soft hyphens, NBSP)
+        if (hum_invisible.checked) {
+            r = r.replace(INVISIBLE_RE, '');
+        }
+
+        // 2. Smart quotes / em-dashes → straight equivalents
+        if (hum_smartPunct.checked) {
+            r = r.replace(SMART_RE, ch => SMART_MAP[ch] || ch);
+        }
+
+        // 3. Boilerplate sentence patterns at the start of the text
+        if (hum_killBoilerplate.checked) {
+            AI_BOILERPLATE_RE.forEach(re => { r = r.replace(re, ''); });
+        }
+
+        // 4. AI buzzword swaps (case-insensitive, preserve initial cap)
+        if (hum_aiPhrases.checked) {
+            Object.entries(AI_PHRASES).forEach(([from, to]) => {
+                const re = new RegExp('\\b' + escapeRegex(from) + '\\b', 'gi');
+                r = r.replace(re, (match) => {
+                    if (!to) return ''; // outright deletion
+                    if (match[0] === match[0].toUpperCase()) return to[0].toUpperCase() + to.slice(1);
+                    return to;
+                });
+            });
+        }
+
+        // 5. Contractions
+        if (hum_contractions.checked) {
+            Object.entries(CONTRACT_FWD).forEach(([from, to]) => {
+                const re = new RegExp('\\b' + escapeRegex(from) + '\\b', 'g');
+                r = r.replace(re, to);
+            });
+        }
+
+        // 6. Inject occasional filler words at sentence starts (intensity-gated)
+        if (hum_fillers.checked) {
+            const p = parseInt(humanizeIntensity.value, 10) / 200; // halved, fillers are loud
+            r = r.replace(/(^|[.!?]\s+)([A-Z])/g, (m, lead, cap) => {
+                if (!chance(p)) return m;
+                const f = pickRandom(FILLERS);
+                return lead + f.charAt(0).toUpperCase() + f.slice(1) + ' ' + cap.toLowerCase();
+            });
+        }
+
+        // 7. Vary sentence length — occasionally split long sentences at commas
+        if (hum_sentenceVary.checked) {
+            const p = parseInt(humanizeIntensity.value, 10) / 100;
+            r = r.replace(/([^.!?]{60,}?),\s+(and|but|so|because|while|though)\s+/g,
+                (m, a, conj) => chance(p) ? a + '. ' + conj.charAt(0).toUpperCase() + conj.slice(1) + ' ' : m);
+        }
+
+        // 8. Collapse runs of spaces left behind by deletions
+        r = r.replace(/[ \t]{2,}/g, ' ').replace(/\s+([.,!?;:])/g, '$1');
+
+        return r;
+    }
+
+    humanizeBtn.addEventListener('click', async () => {
+        if (!preview.innerText.trim()) { toast('Preview is empty.', 'warning'); return; }
+        if (!hum_aiPhrases.checked && !hum_invisible.checked && !hum_smartPunct.checked &&
+            !hum_contractions.checked && !hum_fillers.checked && !hum_sentenceVary.checked &&
+            !hum_killBoilerplate.checked) {
+            toast('Enable at least one humanize option.', 'warning'); return;
+        }
+        const range = getPreviewSelectionRange();
+        humanizeBtn.disabled = true;
+        const orig = humanizeBtn.innerHTML;
+        humanizeBtn.innerHTML = '<span class="spinner"></span> Humanizing…';
+        try {
+            // Humanize is synchronous — wrap in a promise to share the runOnTextNodes pipeline
+            await runOnTextNodes(async (t) => humanizeText(t), range, 'humanize (' + (range?'selection':'document') + ')');
+            updateStats();
+            if (highlightComplex.checked) applyComplexHighlighting();
+            toast(`Humanized ${range ? 'selection' : 'document'} — AI traces stripped.`, 'success');
+        } catch (err) { console.error(err); toast('Humanize failed: ' + err.message, 'error'); }
+        finally { humanizeBtn.disabled = false; humanizeBtn.innerHTML = orig; }
+    });
+
+    /* ============ TONE ============ */
     async function adjustTone(text, tone) {
-        await new Promise(r => setTimeout(r, 100)); // light latency
+        await new Promise(r => setTimeout(r, 80));
         if (tone === 'simple') {
             let r = text;
             Object.entries(COMPLEX_WORDS).forEach(([c, s]) => {
@@ -1525,57 +2323,69 @@
             return r;
         }
         if (tone === 'academic') {
-            return text
-                .replace(/\bcan't\b/gi, 'cannot').replace(/\bdon't\b/gi, 'do not')
-                .replace(/\bwon't\b/gi, 'will not').replace(/\bit's\b/gi, 'it is')
-                .replace(/\bget\b/gi, 'obtain').replace(/\buse\b/gi, 'utilize')
-                .replace(/\bstart\b/gi, 'commence');
+            return text.replace(/\bcan't\b/gi,'cannot').replace(/\bdon't\b/gi,'do not')
+                       .replace(/\bwon't\b/gi,'will not').replace(/\bit's\b/gi,'it is')
+                       .replace(/\bget\b/gi,'obtain').replace(/\buse\b/gi,'utilize').replace(/\bstart\b/gi,'commence');
         }
         if (tone === 'conversational') {
-            return text
-                .replace(/\bcannot\b/gi, "can't").replace(/\bdo not\b/gi, "don't")
-                .replace(/\bwill not\b/gi, "won't").replace(/\bit is\b/gi, "it's")
-                .replace(/\butilize\b/gi, 'use').replace(/\bcommence\b/gi, 'start');
+            return text.replace(/\bcannot\b/gi,"can't").replace(/\bdo not\b/gi,"don't")
+                       .replace(/\bwill not\b/gi,"won't").replace(/\bit is\b/gi,"it's")
+                       .replace(/\butilize\b/gi,'use').replace(/\bcommence\b/gi,'start');
         }
         return text;
     }
-
     applyToneBtn.addEventListener('click', async () => {
         const tone = toneSelect.value;
         if (tone === 'none') { toast('Select a tone first.', 'warning'); return; }
         if (!preview.innerText.trim()) { toast('Preview is empty.', 'warning'); return; }
-
         applyToneBtn.disabled = true;
         const orig = applyToneBtn.innerHTML;
         applyToneBtn.innerHTML = '<span class="spinner"></span> Adjusting…';
-
         try {
             const range = getPreviewSelectionRange();
-            const nodes = range ? collectTextNodesInRange(range) : collectTextNodes(preview);
-            for (const node of nodes) {
-                node.nodeValue = await adjustTone(node.nodeValue, tone);
-            }
-            pushHistory('tone: ' + tone);
+            await runOnTextNodes((t) => adjustTone(t, tone), range, 'tone: ' + tone);
             updateStats();
             if (highlightComplex.checked) applyComplexHighlighting();
             toast(`Applied "${tone}" tone${range ? ' to selection' : ''}.`, 'success');
-        } catch (err) {
-            console.error(err);
-            toast('Tone failed: ' + err.message, 'error', 6000);
-        } finally {
-            applyToneBtn.disabled = false;
-            applyToneBtn.innerHTML = orig;
-        }
+        } catch (err) { console.error(err); toast('Tone failed: ' + err.message, 'error'); }
+        finally { applyToneBtn.disabled = false; applyToneBtn.innerHTML = orig; }
     });
 
+    /* ============ APPLY ALL (CTA) ============ */
+    ctaApplyAll.addEventListener('click', async () => {
+        if (!preview.innerText.trim()) { toast('Preview is empty.', 'warning'); return; }
+        ctaApplyAll.disabled = true;
+        try {
+            // Humanize first (cleans AI fingerprints), then optional tone, then optional imperfections
+            const range = getPreviewSelectionRange();
+            if (hum_aiPhrases.checked || hum_invisible.checked || hum_smartPunct.checked ||
+                hum_contractions.checked || hum_fillers.checked || hum_sentenceVary.checked ||
+                hum_killBoilerplate.checked) {
+                await runOnTextNodes(async (t) => humanizeText(t), range, 'apply-all/humanize');
+            }
+            if (toneSelect.value !== 'none') {
+                await runOnTextNodes((t) => adjustTone(t, toneSelect.value), range, 'apply-all/tone');
+            }
+            if (capVariance.checked || articleSwap.checked || transposition.checked ||
+                punctuationDrift.checked || doubleSpace.checked) {
+                const nodes = range ? collectTextNodesInRange(range) : collectTextNodes(preview);
+                applyImperfectionsTo(nodes);
+                pushHistory('apply-all/imperfections');
+            }
+            updateStats();
+            if (highlightComplex.checked) applyComplexHighlighting();
+            toast('Applied all enabled modules.', 'success');
+        } catch (err) { console.error(err); toast('Apply all failed: ' + err.message, 'error'); }
+        finally { ctaApplyAll.disabled = false; }
+    });
+
+    /* ============ COMPLEX WORDS ============ */
     function applyComplexHighlighting() {
         removeComplexHighlighting();
-        const nodes = collectTextNodes(preview);
         const re = new RegExp('\\b(' + Object.keys(COMPLEX_WORDS).join('|') + ')\\b', 'gi');
-        nodes.forEach(node => {
+        collectTextNodes(preview).forEach(node => {
             const text = node.nodeValue;
-            if (!re.test(text)) { re.lastIndex = 0; return; }
-            re.lastIndex = 0;
+            if (!re.test(text)) { re.lastIndex = 0; return; } re.lastIndex = 0;
             const frag = document.createDocumentFragment();
             let lastIdx = 0; let m;
             while ((m = re.exec(text)) !== null) {
@@ -1598,12 +2408,10 @@
         });
         preview.normalize();
     }
-
     highlightComplex.addEventListener('change', () => {
         if (highlightComplex.checked) { applyComplexHighlighting(); toast('Complex words highlighted.', 'info'); }
         else { removeComplexHighlighting(); toast('Highlighting removed.', 'info'); }
     });
-
     let currentPopup = null;
     preview.addEventListener('click', (e) => {
         if (currentPopup && !currentPopup.contains(e.target)) { currentPopup.remove(); currentPopup = null; }
@@ -1611,7 +2419,6 @@
         if (!target.classList || !target.classList.contains('complex-word')) return;
         const simple = target.dataset.simple || COMPLEX_WORDS[target.textContent.toLowerCase()];
         if (!simple) return;
-
         const popup = document.createElement('div');
         popup.className = 'synonym-popup';
         popup.innerHTML = `Simpler: <strong>${simple}</strong><button data-action="replace">Replace</button>`;
@@ -1620,17 +2427,14 @@
         popup.style.top  = (window.scrollY + rect.bottom + 6) + 'px';
         document.body.appendChild(popup);
         currentPopup = popup;
-
         popup.querySelector('button[data-action="replace"]').addEventListener('click', (ev) => {
             ev.stopPropagation();
             const orig = target.textContent;
             let replacement = simple;
             if (orig[0] === orig[0].toUpperCase()) replacement = simple[0].toUpperCase() + simple.slice(1);
             target.parentNode.replaceChild(document.createTextNode(replacement), target);
-            popup.remove();
-            currentPopup = null;
-            pushHistory('simplify word');
-            updateStats();
+            popup.remove(); currentPopup = null;
+            pushHistory('simplify word'); updateStats();
         });
     });
     document.addEventListener('click', (e) => {
@@ -1639,38 +2443,31 @@
         }
     });
 
-    /* =========================================================
-       5. LIVE STATS + READABILITY
-       ========================================================= */
-    const debounceTimers = {};
-    function debounce(fn, ms) {
-        const key = fn.name || Math.random().toString(36);
-        return (...args) => {
-            clearTimeout(debounceTimers[key]);
-            debounceTimers[key] = setTimeout(() => fn(...args), ms);
-        };
+    /* ============ STATS ============ */
+    const dTimers = {};
+    function debounce(fn, ms, key) {
+        key = key || fn.name || Math.random().toString(36);
+        return (...args) => { clearTimeout(dTimers[key]); dTimers[key] = setTimeout(() => fn(...args), ms); };
     }
-    function countSyllables(word) {
-        word = word.toLowerCase().replace(/[^a-z]/g, '');
-        if (word.length <= 3) return word.length ? 1 : 0;
-        word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '').replace(/^y/, '');
-        const m = word.match(/[aeiouy]{1,2}/g);
-        return m ? m.length : 1;
+    function countSyllables(w) {
+        w = w.toLowerCase().replace(/[^a-z]/g, '');
+        if (w.length <= 3) return w.length ? 1 : 0;
+        w = w.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '').replace(/^y/, '');
+        const m = w.match(/[aeiouy]{1,2}/g); return m ? m.length : 1;
     }
     function updateStats() {
         const text = (preview.innerText || '').trim();
         if (!text) {
             statWords.textContent = statChars.textContent = statSentences.textContent =
                 statParagraphs.textContent = statReadTime.textContent = '0';
-            readability.textContent = '—';
-            readability.className = 'readability';
+            readability.textContent = '—'; readability.className = 'readability';
             return;
         }
-        const words      = text.match(/\b[\w'-]+\b/g) || [];
-        const sentences  = text.split(/[.!?]+(?:\s|$)/).filter(s => s.trim().length > 0);
+        const words = text.match(/\b[\w'-]+\b/g) || [];
+        const sentences = text.split(/[.!?]+(?:\s|$)/).filter(s => s.trim().length > 0);
         const paragraphs = text.split(/\n+/).filter(p => p.trim().length > 0);
-        const sCount     = Math.max(1, sentences.length);
-        const syllables  = words.reduce((a, w) => a + countSyllables(w), 0);
+        const sCount = Math.max(1, sentences.length);
+        const syllables = words.reduce((a, w) => a + countSyllables(w), 0);
         const fk = (0.39 * (words.length / sCount)) + (11.8 * (syllables / Math.max(1, words.length))) - 15.59;
 
         statWords.textContent      = words.length.toLocaleString();
@@ -1682,44 +2479,35 @@
         const grade = Math.max(0, Math.round(fk * 10) / 10);
         readability.textContent = `Grade ${grade}`;
         readability.className = 'readability ' + (grade < 8 ? 'read-easy' : grade < 13 ? 'read-medium' : 'read-hard');
-        readability.title = `Flesch-Kincaid grade ${grade} — ${grade<8?'easy':grade<13?'moderate':'difficult'}`;
+        readability.title = `Flesch-Kincaid grade ${grade}`;
     }
     updateStats();
 
-    /* =========================================================
-       6. FIND & REPLACE
-       ========================================================= */
+    /* ============ FIND & REPLACE ============ */
     let findMatches = []; let findCurrentIdx = -1;
-
     function clearFindHighlights() {
         preview.querySelectorAll('mark.find-match, mark.find-current').forEach(m => {
             const t = document.createTextNode(m.textContent);
             m.parentNode.replaceChild(t, m);
         });
-        preview.normalize();
-        findMatches = []; findCurrentIdx = -1;
+        preview.normalize(); findMatches = []; findCurrentIdx = -1;
     }
     function runFind() {
         clearFindHighlights();
         const q = findInput.value;
         if (!q) { findCount.textContent = ''; return; }
         let regex;
-        try {
-            regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), findCase.checked ? 'g' : 'gi');
-        } catch { findCount.textContent = 'invalid'; return; }
-
+        try { regex = new RegExp(escapeRegex(q), findCase.checked ? 'g' : 'gi'); }
+        catch { findCount.textContent = 'invalid'; return; }
         collectTextNodes(preview).forEach(node => {
             const text = node.nodeValue;
-            if (!regex.test(text)) { regex.lastIndex = 0; return; }
-            regex.lastIndex = 0;
-            const frag = document.createDocumentFragment();
-            let lastIdx = 0; let m;
+            if (!regex.test(text)) { regex.lastIndex = 0; return; } regex.lastIndex = 0;
+            const frag = document.createDocumentFragment(); let lastIdx = 0; let m;
             while ((m = regex.exec(text)) !== null) {
                 if (m.index > lastIdx) frag.appendChild(document.createTextNode(text.slice(lastIdx, m.index)));
-                const mark = document.createElement('mark');
-                mark.className = 'find-match';
-                mark.textContent = m[0];
-                frag.appendChild(mark);
+                const mk = document.createElement('mark');
+                mk.className = 'find-match'; mk.textContent = m[0];
+                frag.appendChild(mk);
                 lastIdx = m.index + m[0].length;
             }
             if (lastIdx < text.length) frag.appendChild(document.createTextNode(text.slice(lastIdx)));
@@ -1735,140 +2523,165 @@
         findCurrentIdx = (idx + findMatches.length) % findMatches.length;
         const cur = findMatches[findCurrentIdx];
         cur.className = 'find-current';
-        cur.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        cur.scrollIntoView({ block:'center', behavior:'smooth' });
         findCount.textContent = `${findCurrentIdx + 1} of ${findMatches.length}`;
     }
-
-    findInput.addEventListener('input', () => debounce(runFind, 200)());
+    findInput.addEventListener('input', () => debounce(runFind, 200, 'find')());
     findCase.addEventListener('change', runFind);
     findNextBtn.addEventListener('click', () => focusMatch(findCurrentIdx + 1));
     findPrevBtn.addEventListener('click', () => focusMatch(findCurrentIdx - 1));
     replaceOneBtn.addEventListener('click', () => {
         if (findCurrentIdx < 0 || !findMatches[findCurrentIdx]) return;
         findMatches[findCurrentIdx].parentNode.replaceChild(document.createTextNode(replaceInput.value), findMatches[findCurrentIdx]);
-        preview.normalize();
-        pushHistory('replace one');
-        runFind();
-        updateStats();
+        preview.normalize(); pushHistory('replace one'); runFind(); updateStats();
     });
     replaceAllBtn.addEventListener('click', () => {
         if (!findMatches.length) return;
         const n = findMatches.length;
         findMatches.forEach(m => m.parentNode.replaceChild(document.createTextNode(replaceInput.value), m));
-        preview.normalize();
-        clearFindHighlights();
-        findCount.textContent = `${n} replaced`;
-        pushHistory('replace all');
-        updateStats();
+        preview.normalize(); clearFindHighlights();
+        findCount.textContent = `${n} replaced`; pushHistory('replace all'); updateStats();
         toast(`Replaced ${n} occurrence${n === 1 ? '' : 's'}.`, 'success');
     });
-
-    function openFindBar()  { findBar.classList.add('open');    setTimeout(() => { findInput.focus(); findInput.select(); }, 100); }
+    function openFindBar()  { findBar.classList.add('open'); setTimeout(() => { findInput.focus(); findInput.select(); }, 100); }
     function closeFindBar() { findBar.classList.remove('open'); clearFindHighlights(); findCount.textContent = ''; }
     findToggleBtn.addEventListener('click', () => findBar.classList.contains('open') ? closeFindBar() : openFindBar());
     findCloseBtn.addEventListener('click', closeFindBar);
 
-    /* =========================================================
-       7. THEME TOGGLE (persisted in localStorage)
-       ========================================================= */
-    function applyTheme(theme) {
-        document.documentElement.setAttribute('data-theme', theme);
-        themeBtn.textContent = theme === 'dark' ? '☀' : '☾';
-        themeBtn.title = `Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`;
-        try { localStorage.setItem('tve-theme', theme); } catch {}
+    /* ============ THEME ============ */
+    function applyTheme(t) {
+        document.documentElement.setAttribute('data-theme', t);
+        themeToggleEl.querySelectorAll('button').forEach(b => b.classList.toggle('active', b.dataset.theme === t));
+        try { localStorage.setItem('ct-theme', t); } catch {}
     }
     function toggleTheme() {
-        const cur = document.documentElement.getAttribute('data-theme') || 'light';
-        applyTheme(cur === 'dark' ? 'light' : 'dark');
+        applyTheme(document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
     }
-    themeBtn.addEventListener('click', toggleTheme);
-    try {
-        const saved = localStorage.getItem('tve-theme');
-        if (saved) applyTheme(saved);
-    } catch {}
+    themeToggleEl.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-theme]');
+        if (btn) applyTheme(btn.dataset.theme);
+    });
+    try { const s = localStorage.getItem('ct-theme'); if (s) applyTheme(s); } catch {}
 
-    /* =========================================================
-       8. HELP MODAL
-       ========================================================= */
+    /* ============ HELP MODAL ============ */
     function openHelp()  { helpModal.classList.add('show'); }
     function closeHelp() { helpModal.classList.remove('show'); }
-    helpBtn.addEventListener('click', openHelp);
     helpCloseBtn.addEventListener('click', closeHelp);
     helpModal.addEventListener('click', (e) => { if (e.target === helpModal) closeHelp(); });
 
-    /* =========================================================
-       9. GLOBAL KEYBOARD SHORTCUTS
-       ========================================================= */
+    /* ============ COMMAND PALETTE ============ */
+    const COMMANDS = [
+        { id:'upload',     label:'Upload .docx',                  hint:'',     run: () => fileInput.click() },
+        { id:'download',   label:'Download…',                     hint:'Ctrl S', run: () => openFilenameModal() },
+        { id:'find',       label:'Find & Replace',                hint:'Ctrl F', run: () => openFindBar() },
+        { id:'undo',       label:'Undo last action',              hint:'Ctrl Z', run: () => undo() },
+        { id:'redo',       label:'Redo',                          hint:'Ctrl Y', run: () => redo() },
+        { id:'imperfect',  label:'Apply imperfections',           hint:'Ctrl I', run: () => applyImperfectionsBtn.click() },
+        { id:'paraphrase', label:'Paraphrase',                    hint:'Ctrl P', run: () => paraphraseBtn.click() },
+        { id:'humanize',   label:'Humanize — strip AI traces',    hint:'Ctrl H', run: () => humanizeBtn.click() },
+        { id:'tone-simple',       label:'Tone: Simple',           hint:'', run: () => { toneSelect.value='simple'; applyToneBtn.click(); } },
+        { id:'tone-academic',     label:'Tone: Academic',         hint:'', run: () => { toneSelect.value='academic'; applyToneBtn.click(); } },
+        { id:'tone-conversational',label:'Tone: Conversational',  hint:'', run: () => { toneSelect.value='conversational'; applyToneBtn.click(); } },
+        { id:'complex',    label:'Toggle complex-word highlights',hint:'', run: () => { highlightComplex.checked = !highlightComplex.checked; highlightComplex.dispatchEvent(new Event('change')); } },
+        { id:'theme',      label:'Toggle theme',                  hint:'Ctrl D', run: toggleTheme },
+        { id:'help',       label:'Help & shortcuts',              hint:'?',     run: openHelp }
+    ];
+    let paletteFiltered = COMMANDS.slice();
+    let paletteIdx = 0;
+
+    function renderPalette() {
+        paletteList.innerHTML = '';
+        paletteFiltered.forEach((cmd, i) => {
+            const item = document.createElement('div');
+            item.className = 'palette-item' + (i === paletteIdx ? ' active' : '');
+            item.innerHTML = `<span class="ic">${cmd.label[0]}</span><span class="label"></span><span class="hint">${cmd.hint}</span>`;
+            item.querySelector('.label').textContent = cmd.label;
+            item.addEventListener('click', () => { closePalette(); cmd.run(); });
+            item.addEventListener('mouseenter', () => { paletteIdx = i; renderPalette(); });
+            paletteList.appendChild(item);
+        });
+    }
+    function openPalette() {
+        paletteFiltered = COMMANDS.slice(); paletteIdx = 0;
+        paletteInput.value = ''; renderPalette();
+        paletteModal.classList.add('show');
+        setTimeout(() => paletteInput.focus(), 100);
+    }
+    function closePalette() { paletteModal.classList.remove('show'); }
+    paletteInput.addEventListener('input', () => {
+        const q = paletteInput.value.toLowerCase();
+        paletteFiltered = COMMANDS.filter(c => c.label.toLowerCase().includes(q) || c.id.includes(q));
+        paletteIdx = 0; renderPalette();
+    });
+    paletteInput.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown') { e.preventDefault(); paletteIdx = Math.min(paletteFiltered.length - 1, paletteIdx + 1); renderPalette(); paletteList.children[paletteIdx]?.scrollIntoView({ block:'nearest' }); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); paletteIdx = Math.max(0, paletteIdx - 1); renderPalette(); paletteList.children[paletteIdx]?.scrollIntoView({ block:'nearest' }); }
+        else if (e.key === 'Enter')   { e.preventDefault(); const cmd = paletteFiltered[paletteIdx]; if (cmd) { closePalette(); cmd.run(); } }
+    });
+    paletteModal.addEventListener('click', (e) => { if (e.target === paletteModal) closePalette(); });
+
+    /* ============ NAV / COMMAND BAR HANDLERS ============ */
+    document.querySelectorAll('.nav-item').forEach(item => {
+        item.addEventListener('click', (e) => {
+            const action = item.dataset.action;
+            if (action === 'focus-editor')  preview.focus();
+            else if (action === 'open-find')    openFindBar();
+            else if (action === 'open-palette') openPalette();
+            else if (action === 'open-help')    openHelp();
+            // Highlight clicked nav
+            document.querySelectorAll('.nav-item[data-action]').forEach(n => n.classList.remove('active'));
+            if (item.dataset.action) item.classList.add('active');
+        });
+    });
+    document.getElementById('commandInput').addEventListener('click', openPalette);
+
+    /* ============ GLOBAL SHORTCUTS ============ */
     document.addEventListener('keydown', (e) => {
         const ctrl = e.ctrlKey || e.metaKey;
         const tag  = (e.target.tagName || '').toLowerCase();
-        const inField = tag === 'input' || tag === 'select';
+        const inField = tag === 'input' || tag === 'select' || tag === 'textarea';
 
-        // Ctrl+F - Find
-        if (ctrl && e.key.toLowerCase() === 'f') {
-            e.preventDefault();
-            openFindBar();
-            return;
-        }
-        // Ctrl+Z - Undo (only when NOT typing into the preview, otherwise let native undo run)
-        if (ctrl && e.key.toLowerCase() === 'z' && !e.shiftKey) {
-            // Use our undo for action-level undo; if in preview let browser undo too
-            if (e.target !== preview) {
-                e.preventDefault();
-                undo();
-            }
-            return;
-        }
-        // Ctrl+Y or Ctrl+Shift+Z - Redo
+        if (ctrl && e.key.toLowerCase() === 'k')                                  { e.preventDefault(); openPalette(); return; }
+        if (ctrl && e.key.toLowerCase() === 'f')                                  { e.preventDefault(); openFindBar(); return; }
+        if (ctrl && e.key.toLowerCase() === 's')                                  { e.preventDefault(); openFilenameModal(); return; }
+        if (ctrl && e.key.toLowerCase() === 'z' && !e.shiftKey && e.target !== preview) { e.preventDefault(); undo(); return; }
         if ((ctrl && e.key.toLowerCase() === 'y') || (ctrl && e.shiftKey && e.key.toLowerCase() === 'z')) {
-            if (e.target !== preview) {
-                e.preventDefault();
-                redo();
-            }
-            return;
+            if (e.target !== preview) { e.preventDefault(); redo(); return; }
         }
-        // Ctrl+I - Imperfections
-        if (ctrl && e.key.toLowerCase() === 'i' && !inField) {
-            e.preventDefault(); applyImperfectionsBtn.click(); return;
-        }
-        // Ctrl+P - Paraphrase
-        if (ctrl && e.key.toLowerCase() === 'p' && !inField) {
-            e.preventDefault(); paraphraseBtn.click(); return;
-        }
-        // Ctrl+D - Theme
-        if (ctrl && e.key.toLowerCase() === 'd') {
-            e.preventDefault(); toggleTheme(); return;
-        }
-        // ? - Help
-        if (e.key === '?' && !inField && e.target !== preview) {
-            e.preventDefault(); openHelp(); return;
-        }
-        // Esc - Close modal or find bar
+        if (ctrl && e.key.toLowerCase() === 'i' && !inField)                       { e.preventDefault(); applyImperfectionsBtn.click(); return; }
+        if (ctrl && e.key.toLowerCase() === 'p' && !inField)                       { e.preventDefault(); paraphraseBtn.click(); return; }
+        if (ctrl && e.key.toLowerCase() === 'h' && !inField)                       { e.preventDefault(); humanizeBtn.click(); return; }
+        if (ctrl && e.key.toLowerCase() === 'd')                                   { e.preventDefault(); toggleTheme(); return; }
+        if (e.key === '?' && !inField && e.target !== preview)                     { e.preventDefault(); openHelp(); return; }
         if (e.key === 'Escape') {
-            if (helpModal.classList.contains('show')) closeHelp();
+            if (paletteModal.classList.contains('show')) closePalette();
+            else if (filenameModal.classList.contains('show')) closeFilenameModal();
+            else if (helpModal.classList.contains('show')) closeHelp();
             else if (findBar.classList.contains('open')) closeFindBar();
             else if (currentPopup) { currentPopup.remove(); currentPopup = null; }
             return;
         }
-        // Enter in find input
         if (e.key === 'Enter' && document.activeElement === findInput) {
-            e.preventDefault();
-            focusMatch(findCurrentIdx + (e.shiftKey ? -1 : 1));
+            e.preventDefault(); focusMatch(findCurrentIdx + (e.shiftKey ? -1 : 1));
         }
     });
 
-    /* =========================================================
-       10. INPUT TRACKING (history + stats)
-       ========================================================= */
+    /* ============ EDITOR INPUT ============ */
     let inputDebounce;
     preview.addEventListener('input', () => {
         preview.classList.toggle('empty', !preview.innerText.trim());
         updateStats();
         clearTimeout(inputDebounce);
-        inputDebounce = setTimeout(() => pushHistory('typing'), 600);
+        inputDebounce = setTimeout(() => pushHistory('typing'), 700);
     });
 
-    // Initial empty snapshot so the first action has something to undo back to
+    /* ============ DOC TITLE PERSIST ============ */
+    docTitle.addEventListener('input', () => {
+        const docItem = document.querySelector('.doc-item.active .name');
+        if (docItem) docItem.textContent = docTitle.value || 'Untitled';
+    });
+
+    /* Initial snapshot so undo has a base */
     pushHistory('initial');
 
     </script>
