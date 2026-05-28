@@ -1,0 +1,1876 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Text Variation &amp; Readability Editor</title>
+
+    <!-- mammoth.js: parses .docx to HTML in the browser -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+    <!-- html-docx-js: converts HTML back into a .docx Blob for download -->
+    <script src="https://unpkg.com/html-docx-js/dist/html-docx.js"></script>
+    <!-- FileSaver.js: cross-browser saveAs() -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+    <style>
+    /* =========================================================
+       UI inspired by Emil Kowalski (emilkowal.ski):
+       - Spring easing: cubic-bezier(0.32, 0.72, 0, 1)
+       - Micro-interactions on every hover/active
+       - Subtle motion, never gratuitous
+       - Sonner-style toasts in the bottom-right
+       ========================================================= */
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+        --ease:     cubic-bezier(0.32, 0.72, 0, 1);
+        --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+        --bg:        #f6f7f9;
+        --panel:     #ffffff;
+        --panel-2:   #fafbfc;
+        --border:    #e5e7eb;
+        --border-2:  #d1d5db;
+        --accent:    #4f46e5;
+        --accent-2:  #6366f1;
+        --accent-hover: #4338ca;
+        --text:      #0f172a;
+        --muted:     #64748b;
+        --danger:    #dc2626;
+        --success:   #16a34a;
+        --warning:   #f59e0b;
+        --highlight: #fde68a;
+        --complex:   #fca5a5;
+        --shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.05);
+        --shadow:    0 4px 12px rgba(15, 23, 42, 0.08);
+        --shadow-lg: 0 20px 40px rgba(15, 23, 42, 0.12);
+        --ring:      0 0 0 3px rgba(79, 70, 229, 0.2);
+    }
+
+    :root[data-theme="dark"] {
+        --bg:        #0b0c10;
+        --panel:     #14161c;
+        --panel-2:   #1a1d24;
+        --border:    #262a33;
+        --border-2:  #353a45;
+        --accent:    #818cf8;
+        --accent-2:  #a5b4fc;
+        --accent-hover: #6366f1;
+        --text:      #e5e7eb;
+        --muted:     #94a3b8;
+        --danger:    #f87171;
+        --success:   #4ade80;
+        --warning:   #fbbf24;
+        --highlight: #b45309;
+        --complex:   #7f1d1d;
+        --shadow-sm: 0 1px 2px rgba(0,0,0,0.4);
+        --shadow:    0 4px 16px rgba(0,0,0,0.5);
+        --shadow-lg: 0 20px 50px rgba(0,0,0,0.6);
+        --ring:      0 0 0 3px rgba(129, 140, 248, 0.25);
+    }
+
+    html, body {
+        height: 100%;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        color: var(--text);
+        background: var(--bg);
+        font-size: 14px;
+        line-height: 1.5;
+        transition: background-color 0.4s var(--ease), color 0.4s var(--ease);
+        -webkit-font-smoothing: antialiased;
+    }
+
+    /* ---------- Header ---------- */
+    header {
+        background: var(--panel);
+        border-bottom: 1px solid var(--border);
+        padding: 10px 20px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        box-shadow: var(--shadow-sm);
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        transition: background-color 0.4s var(--ease), border-color 0.4s var(--ease);
+    }
+    header h1 {
+        font-size: 16px;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    header h1::before {
+        content: "";
+        display: inline-block;
+        width: 18px; height: 18px;
+        background: linear-gradient(135deg, var(--accent), var(--accent-2));
+        border-radius: 5px;
+        box-shadow: var(--shadow-sm);
+    }
+    header .actions {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+    }
+
+    /* ---------- Buttons ---------- */
+    .btn {
+        background: var(--accent);
+        color: #fff;
+        border: 1px solid transparent;
+        padding: 7px 12px;
+        border-radius: 7px;
+        font-size: 12.5px;
+        font-weight: 500;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        transition: transform 0.18s var(--ease),
+                    background-color 0.18s var(--ease),
+                    box-shadow 0.18s var(--ease),
+                    opacity 0.18s var(--ease);
+        will-change: transform;
+        white-space: nowrap;
+    }
+    .btn:hover {
+        background: var(--accent-hover);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow);
+    }
+    .btn:active { transform: translateY(0) scale(0.97); }
+    .btn:focus-visible { outline: none; box-shadow: var(--ring); }
+    .btn:disabled { background: var(--border-2); cursor: not-allowed; opacity: 0.6; transform: none; box-shadow: none; }
+
+    .btn-secondary {
+        background: var(--panel);
+        color: var(--text);
+        border: 1px solid var(--border);
+    }
+    .btn-secondary:hover {
+        background: var(--panel-2);
+        border-color: var(--border-2);
+    }
+
+    .btn-ghost {
+        background: transparent;
+        color: var(--muted);
+        padding: 6px 8px;
+    }
+    .btn-ghost:hover {
+        background: var(--panel-2);
+        color: var(--text);
+        transform: none;
+        box-shadow: none;
+    }
+
+    .icon-btn {
+        background: transparent;
+        border: 1px solid transparent;
+        color: var(--muted);
+        width: 32px; height: 32px;
+        border-radius: 7px;
+        display: inline-flex; align-items: center; justify-content: center;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.18s var(--ease);
+    }
+    .icon-btn:hover {
+        background: var(--panel-2);
+        color: var(--text);
+        border-color: var(--border);
+        transform: translateY(-1px);
+    }
+    .icon-btn:active { transform: translateY(0) scale(0.92); }
+    .icon-btn:disabled { opacity: 0.35; cursor: not-allowed; transform: none; }
+
+    /* File input styled as button */
+    .file-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: var(--accent);
+        color: #fff;
+        padding: 7px 12px;
+        border-radius: 7px;
+        font-size: 12.5px;
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.18s var(--ease);
+    }
+    .file-label:hover {
+        background: var(--accent-hover);
+        transform: translateY(-1px);
+        box-shadow: var(--shadow);
+    }
+    .file-label:active { transform: translateY(0) scale(0.97); }
+    #fileInput { display: none; }
+
+    /* Header separator */
+    .sep {
+        width: 1px;
+        height: 20px;
+        background: var(--border);
+        margin: 0 4px;
+    }
+
+    /* ---------- Main two-pane layout ---------- */
+    main {
+        display: flex;
+        height: calc(100vh - 53px);
+        overflow: hidden;
+    }
+
+    /* Left pane wrapper */
+    .preview-wrap {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        position: relative;
+    }
+
+    /* Find & Replace toolbar */
+    .find-bar {
+        max-height: 0;
+        overflow: hidden;
+        background: var(--panel);
+        border-bottom: 1px solid var(--border);
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        flex-wrap: wrap;
+        transition: max-height 0.3s var(--ease), padding 0.3s var(--ease);
+        padding: 0 16px;
+    }
+    .find-bar.open {
+        max-height: 80px;
+        padding: 10px 16px;
+    }
+    .find-bar input[type="text"] {
+        padding: 6px 10px;
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        font-size: 13px;
+        min-width: 160px;
+        background: var(--panel);
+        color: var(--text);
+        transition: all 0.18s var(--ease);
+    }
+    .find-bar input[type="text"]:focus {
+        outline: none;
+        border-color: var(--accent);
+        box-shadow: var(--ring);
+    }
+    .find-bar .count {
+        font-size: 12px;
+        color: var(--muted);
+        min-width: 80px;
+    }
+    .find-bar label {
+        font-size: 12px;
+        color: var(--text);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        cursor: pointer;
+    }
+    .find-bar .btn { padding: 5px 10px; font-size: 12px; }
+
+    mark.find-match {
+        background: var(--highlight);
+        padding: 0 1px;
+        border-radius: 2px;
+    }
+    mark.find-current {
+        background: var(--warning);
+        color: #fff;
+    }
+
+    /* Preview pane */
+    .preview-pane {
+        flex: 1;
+        padding: 24px;
+        overflow-y: auto;
+        background: var(--bg);
+        transition: background-color 0.4s var(--ease);
+    }
+
+    #preview {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 36px 44px;
+        min-height: 100%;
+        font-size: 15px;
+        line-height: 1.7;
+        outline: none;
+        box-shadow: var(--shadow-sm);
+        transition: background-color 0.4s var(--ease), border-color 0.4s var(--ease);
+    }
+    #preview:focus {
+        border-color: var(--accent);
+        box-shadow: var(--shadow);
+    }
+    #preview p { margin-bottom: 12px; }
+    #preview h1, #preview h2, #preview h3 { margin: 18px 0 10px; font-weight: 600; letter-spacing: -0.01em; }
+    #preview h1 { font-size: 22px; }
+    #preview h2 { font-size: 18px; }
+    #preview h3 { font-size: 16px; }
+
+    /* Empty state */
+    #preview.empty::before {
+        content: "Drop a .docx here, click Upload, or start typing…";
+        color: var(--muted);
+        font-style: italic;
+    }
+
+    /* Tables (mammoth strips styling — restored) */
+    #preview table {
+        border-collapse: collapse;
+        margin: 14px 0;
+        width: auto;
+        max-width: 100%;
+        font-size: 14px;
+    }
+    #preview table td,
+    #preview table th {
+        border: 1px solid var(--border-2);
+        padding: 8px 12px;
+        vertical-align: top;
+        text-align: left;
+    }
+    #preview table th {
+        background: var(--panel-2);
+        font-weight: 600;
+    }
+    #preview table tr:nth-child(even) td { background: var(--panel-2); }
+    #preview table p { margin: 0; }
+    #preview img { max-width: 100%; height: auto; }
+    #preview ul, #preview ol { margin: 8px 0 12px 24px; }
+    #preview blockquote {
+        border-left: 3px solid var(--border-2);
+        padding-left: 12px;
+        color: var(--muted);
+        margin: 12px 0;
+    }
+
+    /* Complex words */
+    .complex-word {
+        background: var(--complex);
+        border-radius: 3px;
+        padding: 0 2px;
+        cursor: pointer;
+        transition: filter 0.18s var(--ease), transform 0.18s var(--ease);
+    }
+    .complex-word:hover { filter: brightness(0.9); transform: translateY(-0.5px); }
+
+    /* Selection highlighted by a recent action */
+    .pulse-highlight {
+        animation: pulseHighlight 1.2s var(--ease) 1;
+    }
+    @keyframes pulseHighlight {
+        0%   { background-color: rgba(79, 70, 229, 0.25); }
+        100% { background-color: transparent; }
+    }
+
+    /* Drag-drop overlay */
+    .drop-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(79, 70, 229, 0.08);
+        border: 2px dashed var(--accent);
+        border-radius: 12px;
+        margin: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--accent);
+        pointer-events: none;
+        opacity: 0;
+        transform: scale(0.98);
+        transition: opacity 0.2s var(--ease), transform 0.2s var(--ease);
+        z-index: 5;
+    }
+    .drop-overlay.show {
+        opacity: 1;
+        transform: scale(1);
+    }
+
+    /* Stats footer */
+    .stats-bar {
+        background: var(--panel);
+        border-top: 1px solid var(--border);
+        padding: 8px 16px;
+        display: flex;
+        gap: 18px;
+        font-size: 12px;
+        color: var(--muted);
+        flex-wrap: wrap;
+        align-items: center;
+        transition: background-color 0.4s var(--ease), border-color 0.4s var(--ease);
+    }
+    .stats-bar .stat strong { color: var(--text); font-weight: 600; }
+    .stats-bar .readability {
+        margin-left: auto;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 11px;
+        transition: background-color 0.3s var(--ease);
+    }
+    .read-easy   { background: rgba(34, 197, 94, 0.15);  color: var(--success); }
+    .read-medium { background: rgba(245, 158, 11, 0.15); color: var(--warning); }
+    .read-hard   { background: rgba(220, 38, 38, 0.15);  color: var(--danger); }
+
+    /* Right pane (control panel) */
+    .control-pane {
+        width: 340px;
+        background: var(--panel);
+        border-left: 1px solid var(--border);
+        overflow-y: auto;
+        padding: 16px;
+        transition: background-color 0.4s var(--ease), border-color 0.4s var(--ease);
+    }
+
+    .module {
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 14px;
+        margin-bottom: 12px;
+        transition: all 0.25s var(--ease);
+    }
+    .module:hover {
+        border-color: var(--border-2);
+        box-shadow: var(--shadow-sm);
+    }
+    .module h2 {
+        font-size: 11px;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: var(--muted);
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .module h2::before {
+        content: "";
+        width: 6px; height: 6px;
+        background: var(--accent);
+        border-radius: 50%;
+    }
+    .module label {
+        display: block;
+        font-size: 13px;
+        margin-bottom: 8px;
+    }
+
+    /* Slider — custom track */
+    .slider-wrap {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 12px;
+    }
+    input[type="range"] {
+        flex: 1;
+        -webkit-appearance: none;
+        appearance: none;
+        height: 4px;
+        background: var(--border);
+        border-radius: 4px;
+        outline: none;
+        transition: background 0.18s var(--ease);
+    }
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 16px; height: 16px;
+        background: var(--accent);
+        border-radius: 50%;
+        cursor: pointer;
+        transition: transform 0.18s var(--ease), box-shadow 0.18s var(--ease);
+        box-shadow: var(--shadow-sm);
+    }
+    input[type="range"]::-webkit-slider-thumb:hover {
+        transform: scale(1.15);
+        box-shadow: var(--ring);
+    }
+    input[type="range"]::-moz-range-thumb {
+        width: 16px; height: 16px;
+        background: var(--accent);
+        border: none;
+        border-radius: 50%;
+        cursor: pointer;
+    }
+    .slider-value {
+        min-width: 36px;
+        text-align: right;
+        font-weight: 600;
+        color: var(--accent);
+        font-size: 13px;
+        font-variant-numeric: tabular-nums;
+    }
+
+    .checkbox-group label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 6px;
+        cursor: pointer;
+        font-size: 13px;
+        padding: 4px 6px;
+        margin-left: -6px;
+        border-radius: 5px;
+        transition: background-color 0.15s var(--ease);
+    }
+    .checkbox-group label:hover { background: var(--panel); }
+    .checkbox-group input { cursor: pointer; accent-color: var(--accent); }
+
+    select {
+        width: 100%;
+        padding: 7px 10px;
+        border: 1px solid var(--border);
+        border-radius: 7px;
+        background: var(--panel);
+        color: var(--text);
+        font-size: 13px;
+        cursor: pointer;
+        transition: all 0.18s var(--ease);
+    }
+    select:hover { border-color: var(--border-2); }
+    select:focus { outline: none; border-color: var(--accent); box-shadow: var(--ring); }
+
+    .module-btn { width: 100%; margin-top: 8px; justify-content: center; }
+
+    .scope-hint {
+        font-size: 11px;
+        color: var(--muted);
+        margin-top: 8px;
+        padding: 6px 8px;
+        background: var(--panel);
+        border-radius: 5px;
+        border-left: 2px solid var(--accent);
+    }
+
+    /* ---------- Sonner-style toasts ---------- */
+    #toastContainer {
+        position: fixed;
+        bottom: 16px;
+        right: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        z-index: 1000;
+        pointer-events: none;
+    }
+    .toast {
+        background: var(--panel);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px 14px;
+        font-size: 13px;
+        box-shadow: var(--shadow-lg);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        min-width: 280px;
+        max-width: 360px;
+        pointer-events: auto;
+        transform: translateX(120%);
+        opacity: 0;
+        transition: transform 0.4s var(--ease), opacity 0.3s var(--ease);
+    }
+    .toast.show { transform: translateX(0); opacity: 1; }
+    .toast.hide { transform: translateX(120%); opacity: 0; }
+    .toast-icon {
+        width: 18px; height: 18px;
+        border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-size: 11px;
+        color: #fff;
+        flex-shrink: 0;
+    }
+    .toast-success .toast-icon { background: var(--success); }
+    .toast-error   .toast-icon { background: var(--danger); }
+    .toast-info    .toast-icon { background: var(--accent); }
+    .toast-warning .toast-icon { background: var(--warning); }
+    .toast .close {
+        margin-left: auto;
+        color: var(--muted);
+        cursor: pointer;
+        background: none;
+        border: none;
+        font-size: 14px;
+        padding: 0 4px;
+    }
+    .toast .close:hover { color: var(--text); }
+
+    /* ---------- Synonym popup ---------- */
+    .synonym-popup {
+        position: absolute;
+        background: var(--text);
+        color: var(--panel);
+        padding: 8px 12px;
+        border-radius: 8px;
+        font-size: 12px;
+        box-shadow: var(--shadow-lg);
+        z-index: 100;
+        opacity: 0;
+        transform: translateY(-4px);
+        animation: popIn 0.2s var(--ease) forwards;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    @keyframes popIn { to { opacity: 1; transform: translateY(0); } }
+    .synonym-popup button {
+        background: var(--accent);
+        color: #fff;
+        border: none;
+        padding: 3px 10px;
+        border-radius: 5px;
+        font-size: 11px;
+        cursor: pointer;
+        transition: background 0.15s var(--ease);
+    }
+    .synonym-popup button:hover { background: var(--accent-hover); }
+
+    /* ---------- Modal (help / shortcuts) ---------- */
+    .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.5);
+        backdrop-filter: blur(4px);
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.25s var(--ease);
+        z-index: 999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .modal-backdrop.show { opacity: 1; pointer-events: auto; }
+    .modal {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 24px;
+        width: 480px;
+        max-width: 90vw;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: var(--shadow-lg);
+        transform: scale(0.95) translateY(8px);
+        transition: transform 0.3s var(--ease);
+    }
+    .modal-backdrop.show .modal { transform: scale(1) translateY(0); }
+    .modal h2 {
+        font-size: 16px; font-weight: 600;
+        margin-bottom: 12px;
+        display: flex; align-items: center; justify-content: space-between;
+    }
+    .modal h2 .close {
+        background: var(--panel-2); border: 1px solid var(--border);
+        width: 26px; height: 26px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.15s var(--ease);
+        color: var(--text);
+    }
+    .modal h2 .close:hover { background: var(--border); }
+    .shortcut-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        border-bottom: 1px solid var(--border);
+        font-size: 13px;
+    }
+    .shortcut-row:last-child { border-bottom: none; }
+    .kbd {
+        background: var(--panel-2);
+        border: 1px solid var(--border);
+        border-bottom-width: 2px;
+        border-radius: 5px;
+        padding: 2px 7px;
+        font-family: ui-monospace, monospace;
+        font-size: 11px;
+        color: var(--text);
+        margin-left: 4px;
+    }
+
+    /* ---------- Loading spinner ---------- */
+    .spinner {
+        display: inline-block;
+        width: 12px; height: 12px;
+        border: 2px solid currentColor;
+        border-top-color: transparent;
+        border-radius: 50%;
+        animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ---------- Scrollbar polish ---------- */
+    ::-webkit-scrollbar { width: 10px; height: 10px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb {
+        background: var(--border-2);
+        border-radius: 5px;
+        border: 2px solid var(--bg);
+    }
+    ::-webkit-scrollbar-thumb:hover { background: var(--muted); }
+
+    /* ---------- Dropdown menu (Download) ---------- */
+    .menu-wrap { position: relative; }
+    .menu {
+        position: absolute;
+        right: 0;
+        top: calc(100% + 6px);
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 6px;
+        box-shadow: var(--shadow-lg);
+        min-width: 160px;
+        opacity: 0;
+        transform: translateY(-6px);
+        pointer-events: none;
+        transition: opacity 0.2s var(--ease), transform 0.2s var(--ease);
+        z-index: 60;
+    }
+    .menu.show { opacity: 1; transform: translateY(0); pointer-events: auto; }
+    .menu button {
+        display: flex;
+        width: 100%;
+        text-align: left;
+        background: transparent;
+        border: none;
+        padding: 7px 10px;
+        font-size: 13px;
+        color: var(--text);
+        border-radius: 6px;
+        cursor: pointer;
+        transition: background 0.15s var(--ease);
+        align-items: center;
+        gap: 8px;
+    }
+    .menu button:hover { background: var(--panel-2); }
+    .menu .menu-sub { color: var(--muted); font-size: 11px; margin-left: auto; }
+
+    </style>
+</head>
+<body>
+
+    <!-- ====================== HEADER ====================== -->
+    <header>
+        <h1>Text Variation &amp; Readability Editor</h1>
+        <div class="actions">
+            <button class="icon-btn" id="undoBtn" title="Undo (Ctrl+Z)" disabled>↶</button>
+            <button class="icon-btn" id="redoBtn" title="Redo (Ctrl+Y)" disabled>↷</button>
+            <span class="sep"></span>
+
+            <label for="fileInput" class="file-label">Upload .docx</label>
+            <input type="file" id="fileInput" accept=".docx" />
+
+            <button id="findToggleBtn" class="btn btn-secondary" title="Find &amp; Replace (Ctrl+F)">Find</button>
+
+            <div class="menu-wrap">
+                <button id="downloadMenuBtn" class="btn">Download ▾</button>
+                <div class="menu" id="downloadMenu">
+                    <button data-fmt="docx">.docx <span class="menu-sub">Word</span></button>
+                    <button data-fmt="html">.html <span class="menu-sub">Webpage</span></button>
+                    <button data-fmt="txt">.txt  <span class="menu-sub">Plain text</span></button>
+                </div>
+            </div>
+
+            <span class="sep"></span>
+            <button class="icon-btn" id="helpBtn" title="Keyboard shortcuts (?)">?</button>
+            <button class="icon-btn" id="themeBtn" title="Toggle theme">☾</button>
+        </div>
+    </header>
+
+    <!-- ====================== MAIN ====================== -->
+    <main>
+        <div class="preview-wrap">
+
+            <!-- Drop overlay (shown while dragging files) -->
+            <div class="drop-overlay" id="dropOverlay">Drop your .docx file to import</div>
+
+            <!-- Find & Replace -->
+            <div class="find-bar" id="findBar">
+                <input type="text" id="findInput"    placeholder="Find…" />
+                <input type="text" id="replaceInput" placeholder="Replace…" />
+                <label><input type="checkbox" id="findCase" /> Aa</label>
+                <button class="btn btn-secondary" id="findPrevBtn">↑</button>
+                <button class="btn btn-secondary" id="findNextBtn">↓</button>
+                <button class="btn" id="replaceOneBtn">Replace</button>
+                <button class="btn" id="replaceAllBtn">All</button>
+                <span class="count" id="findCount"></span>
+                <button class="btn btn-secondary" id="findCloseBtn">✕</button>
+            </div>
+
+            <section class="preview-pane">
+                <div id="preview" contenteditable="true" class="empty" spellcheck="false"></div>
+            </section>
+
+            <!-- Stats footer -->
+            <div class="stats-bar" id="statsBar">
+                <span class="stat"><strong id="statWords">0</strong> words</span>
+                <span class="stat"><strong id="statChars">0</strong> chars</span>
+                <span class="stat"><strong id="statSentences">0</strong> sentences</span>
+                <span class="stat"><strong id="statParagraphs">0</strong> paragraphs</span>
+                <span class="stat"><strong id="statReadTime">0</strong> min read</span>
+                <span class="readability" id="readability" title="Flesch-Kincaid grade level">—</span>
+            </div>
+        </div>
+
+        <!-- ====================== CONTROL PANEL ====================== -->
+        <aside class="control-pane">
+
+            <!-- Module 1: Imperfections -->
+            <div class="module">
+                <h2>Organic Imperfection</h2>
+
+                <label for="intensity">Intensity</label>
+                <div class="slider-wrap">
+                    <input type="range" id="intensity" min="1" max="100" value="10" />
+                    <span class="slider-value" id="intensityValue">10</span>
+                </div>
+
+                <div class="checkbox-group">
+                    <label><input type="checkbox" id="capVariance" checked /> Capitalization variance</label>
+                    <label><input type="checkbox" id="articleSwap" checked /> Article swapping (a/an/the)</label>
+                    <label><input type="checkbox" id="transposition" checked /> Letter transposition</label>
+                    <label><input type="checkbox" id="punctuationDrift" /> Punctuation drift</label>
+                    <label><input type="checkbox" id="doubleSpace" /> Random double-space</label>
+                </div>
+
+                <button id="applyImperfectionsBtn" class="btn module-btn">Apply</button>
+                <div class="scope-hint" id="imperfectionScope">Scope: entire document</div>
+            </div>
+
+            <!-- Module 2: Paraphrase -->
+            <div class="module">
+                <h2>Paraphrase</h2>
+                <label for="paraphraseStyle">Style</label>
+                <select id="paraphraseStyle">
+                    <option value="standard">Standard</option>
+                    <option value="formal">Formal</option>
+                    <option value="casual">Casual</option>
+                    <option value="concise">Concise</option>
+                </select>
+                <button id="paraphraseBtn" class="btn module-btn">Paraphrase</button>
+                <div class="scope-hint" id="paraphraseScope">Scope: entire document</div>
+            </div>
+
+            <!-- Module 3: Vocabulary & Tone -->
+            <div class="module">
+                <h2>Vocabulary &amp; Tone</h2>
+
+                <label for="tone">Tone</label>
+                <select id="tone">
+                    <option value="none">— None —</option>
+                    <option value="simple">Simple</option>
+                    <option value="academic">Academic</option>
+                    <option value="conversational">Conversational</option>
+                </select>
+                <button id="applyToneBtn" class="btn module-btn">Apply Tone</button>
+
+                <label style="margin-top:14px;display:flex;align-items:center;gap:8px;cursor:pointer;">
+                    <input type="checkbox" id="highlightComplex" />
+                    Highlight complex words
+                </label>
+            </div>
+
+        </aside>
+    </main>
+
+    <!-- Toasts -->
+    <div id="toastContainer"></div>
+
+    <!-- Help modal -->
+    <div class="modal-backdrop" id="helpModal">
+        <div class="modal">
+            <h2>Keyboard shortcuts <button class="close" id="helpCloseBtn">✕</button></h2>
+            <div class="shortcut-row"><span>Find &amp; Replace</span> <span><span class="kbd">Ctrl</span><span class="kbd">F</span></span></div>
+            <div class="shortcut-row"><span>Undo</span> <span><span class="kbd">Ctrl</span><span class="kbd">Z</span></span></div>
+            <div class="shortcut-row"><span>Redo</span> <span><span class="kbd">Ctrl</span><span class="kbd">Y</span></span></div>
+            <div class="shortcut-row"><span>Apply imperfections</span> <span><span class="kbd">Ctrl</span><span class="kbd">I</span></span></div>
+            <div class="shortcut-row"><span>Paraphrase</span> <span><span class="kbd">Ctrl</span><span class="kbd">P</span></span></div>
+            <div class="shortcut-row"><span>Toggle theme</span> <span><span class="kbd">Ctrl</span><span class="kbd">D</span></span></div>
+            <div class="shortcut-row"><span>Show this help</span> <span><span class="kbd">?</span></span></div>
+            <div class="shortcut-row"><span>Close modal / find bar</span> <span><span class="kbd">Esc</span></span></div>
+            <p style="margin-top:14px;font-size:12px;color:var(--muted);line-height:1.6;">
+                Select text in the preview to scope Imperfections or Paraphrase to that selection only.
+                With no selection, actions apply to the whole document.
+            </p>
+        </div>
+    </div>
+
+    <script>
+    /* =========================================================
+       Text Variation & Readability Editor
+       Vanilla JS, ES6+, client-side.
+       UI motion inspired by Emil Kowalski (Sonner / Vaul).
+       ========================================================= */
+
+    // ---------- DOM refs ----------
+    const fileInput            = document.getElementById('fileInput');
+    const preview              = document.getElementById('preview');
+    const dropOverlay          = document.getElementById('dropOverlay');
+
+    const undoBtn              = document.getElementById('undoBtn');
+    const redoBtn              = document.getElementById('redoBtn');
+    const themeBtn             = document.getElementById('themeBtn');
+    const helpBtn              = document.getElementById('helpBtn');
+    const helpModal            = document.getElementById('helpModal');
+    const helpCloseBtn         = document.getElementById('helpCloseBtn');
+
+    const downloadMenuBtn      = document.getElementById('downloadMenuBtn');
+    const downloadMenu         = document.getElementById('downloadMenu');
+
+    // Find & Replace
+    const findToggleBtn        = document.getElementById('findToggleBtn');
+    const findBar              = document.getElementById('findBar');
+    const findInput            = document.getElementById('findInput');
+    const replaceInput         = document.getElementById('replaceInput');
+    const findCase             = document.getElementById('findCase');
+    const findPrevBtn          = document.getElementById('findPrevBtn');
+    const findNextBtn          = document.getElementById('findNextBtn');
+    const replaceOneBtn        = document.getElementById('replaceOneBtn');
+    const replaceAllBtn        = document.getElementById('replaceAllBtn');
+    const findCloseBtn         = document.getElementById('findCloseBtn');
+    const findCount            = document.getElementById('findCount');
+
+    // Stats
+    const statWords            = document.getElementById('statWords');
+    const statChars            = document.getElementById('statChars');
+    const statSentences        = document.getElementById('statSentences');
+    const statParagraphs       = document.getElementById('statParagraphs');
+    const statReadTime         = document.getElementById('statReadTime');
+    const readability          = document.getElementById('readability');
+
+    // Imperfections
+    const intensity            = document.getElementById('intensity');
+    const intensityValue       = document.getElementById('intensityValue');
+    const capVariance          = document.getElementById('capVariance');
+    const articleSwap          = document.getElementById('articleSwap');
+    const transposition        = document.getElementById('transposition');
+    const punctuationDrift     = document.getElementById('punctuationDrift');
+    const doubleSpace          = document.getElementById('doubleSpace');
+    const applyImperfectionsBtn= document.getElementById('applyImperfectionsBtn');
+    const imperfectionScope    = document.getElementById('imperfectionScope');
+
+    // Paraphrase
+    const paraphraseStyle      = document.getElementById('paraphraseStyle');
+    const paraphraseBtn        = document.getElementById('paraphraseBtn');
+    const paraphraseScope      = document.getElementById('paraphraseScope');
+
+    // Tone & complex words
+    const toneSelect           = document.getElementById('tone');
+    const applyToneBtn         = document.getElementById('applyToneBtn');
+    const highlightComplex     = document.getElementById('highlightComplex');
+
+    const toastContainer       = document.getElementById('toastContainer');
+
+    // ---------- Mock dictionary (20 complex words → simpler synonyms) ----------
+    const COMPLEX_WORDS = {
+        'utilize':        'use',
+        'commence':       'start',
+        'terminate':      'end',
+        'endeavor':       'try',
+        'facilitate':     'help',
+        'demonstrate':    'show',
+        'subsequently':   'later',
+        'sufficient':     'enough',
+        'numerous':       'many',
+        'fundamental':    'basic',
+        'approximately':  'about',
+        'consequently':   'so',
+        'ascertain':      'find out',
+        'expedite':       'speed up',
+        'optimal':        'best',
+        'paradigm':       'model',
+        'leverage':       'use',
+        'methodology':    'method',
+        'implement':      'do',
+        'comprehensive':  'complete'
+    };
+
+    /* =========================================================
+       UTILITIES
+       ========================================================= */
+
+    const chance     = (p) => Math.random() < p;
+    const pickRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+    function downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a   = document.createElement('a');
+        a.href    = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    }
+
+    /* =========================================================
+       TOAST SYSTEM (Sonner-inspired)
+       ========================================================= */
+    let toastSeq = 0;
+    function toast(message, type = 'info', duration = 3500) {
+        const id = ++toastSeq;
+        const el = document.createElement('div');
+        el.className = `toast toast-${type}`;
+        el.setAttribute('data-id', id);
+        const iconChar = { success: '✓', error: '!', warning: '!', info: 'i' }[type] || 'i';
+        el.innerHTML = `
+            <span class="toast-icon">${iconChar}</span>
+            <span class="toast-msg"></span>
+            <button class="close" aria-label="Dismiss">✕</button>`;
+        el.querySelector('.toast-msg').textContent = message;
+        el.querySelector('.close').addEventListener('click', () => dismissToast(el));
+        toastContainer.appendChild(el);
+        // Trigger animation
+        requestAnimationFrame(() => el.classList.add('show'));
+        // Auto-dismiss
+        const timer = setTimeout(() => dismissToast(el), duration);
+        el.addEventListener('mouseenter', () => clearTimeout(timer));
+        return el;
+    }
+    function dismissToast(el) {
+        if (!el || !el.parentNode) return;
+        el.classList.remove('show');
+        el.classList.add('hide');
+        setTimeout(() => el.remove(), 400);
+    }
+
+    /* =========================================================
+       UNDO / REDO HISTORY STACK
+       ========================================================= */
+    const history = { stack: [], idx: -1, suppress: false };
+    const HISTORY_LIMIT = 50;
+
+    function pushHistory(label = '') {
+        if (history.suppress) return;
+        // Truncate any redo branch
+        history.stack = history.stack.slice(0, history.idx + 1);
+        const snapshot = { html: preview.innerHTML, label };
+        // Skip if identical to top
+        if (history.stack.length && history.stack[history.stack.length - 1].html === snapshot.html) return;
+        history.stack.push(snapshot);
+        if (history.stack.length > HISTORY_LIMIT) history.stack.shift();
+        history.idx = history.stack.length - 1;
+        updateUndoRedoButtons();
+    }
+    function undo() {
+        if (history.idx <= 0) return;
+        history.idx--;
+        applyHistorySnapshot();
+        toast('Undone', 'info', 1500);
+    }
+    function redo() {
+        if (history.idx >= history.stack.length - 1) return;
+        history.idx++;
+        applyHistorySnapshot();
+        toast('Redone', 'info', 1500);
+    }
+    function applyHistorySnapshot() {
+        history.suppress = true;
+        preview.innerHTML = history.stack[history.idx].html;
+        preview.classList.toggle('empty', !preview.innerText.trim());
+        updateStats();
+        if (highlightComplex.checked) applyComplexHighlighting();
+        updateUndoRedoButtons();
+        history.suppress = false;
+    }
+    function updateUndoRedoButtons() {
+        undoBtn.disabled = history.idx <= 0;
+        redoBtn.disabled = history.idx >= history.stack.length - 1;
+    }
+
+    undoBtn.addEventListener('click', undo);
+    redoBtn.addEventListener('click', redo);
+
+    /* =========================================================
+       SELECTION HELPERS
+       ========================================================= */
+
+    /** Return the current Range if selection is non-empty AND inside preview. */
+    function getPreviewSelectionRange() {
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0 || sel.toString().trim() === '') return null;
+        const range = sel.getRangeAt(0);
+        if (!preview.contains(range.commonAncestorContainer)) return null;
+        return range;
+    }
+
+    /** Collect text nodes under root (skipping script/style). */
+    function collectTextNodes(root) {
+        const nodes = [];
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+            acceptNode: (node) => {
+                if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+                const tag = node.parentNode && node.parentNode.tagName;
+                if (tag === 'SCRIPT' || tag === 'STYLE') return NodeFilter.FILTER_REJECT;
+                return NodeFilter.FILTER_ACCEPT;
+            }
+        });
+        let n; while ((n = walker.nextNode())) nodes.push(n);
+        return nodes;
+    }
+
+    /** Collect text nodes that intersect a Range (for selection-scoped operations). */
+    function collectTextNodesInRange(range) {
+        if (!range) return [];
+        // If selection is inside a single text node, just return that one.
+        if (range.startContainer === range.endContainer && range.startContainer.nodeType === Node.TEXT_NODE) {
+            return [range.startContainer];
+        }
+        const root = range.commonAncestorContainer.nodeType === Node.TEXT_NODE
+            ? range.commonAncestorContainer.parentNode
+            : range.commonAncestorContainer;
+        const all = collectTextNodes(root);
+        return all.filter(node => range.intersectsNode(node));
+    }
+
+    /** Update the scope hint shown beneath imperfections / paraphrase. */
+    function refreshScopeHints() {
+        const sel = window.getSelection();
+        const hasSel = sel && sel.rangeCount > 0 && sel.toString().trim() !== '' && preview.contains(sel.getRangeAt(0).commonAncestorContainer);
+        const len = hasSel ? sel.toString().length : 0;
+        const msg = hasSel
+            ? `Scope: selection (${len} chars)`
+            : 'Scope: entire document';
+        imperfectionScope.textContent = msg;
+        paraphraseScope.textContent   = msg;
+    }
+    document.addEventListener('selectionchange', refreshScopeHints);
+
+    /* =========================================================
+       1. DOCUMENT PARSING (mammoth)
+       ========================================================= */
+    async function parseDocxFile(file) {
+        if (!file.name.toLowerCase().endsWith('.docx')) {
+            toast('Please upload a valid .docx file.', 'error');
+            return;
+        }
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const options = {
+                styleMap: [
+                    "p[style-name='Heading 1'] => h1:fresh",
+                    "p[style-name='Heading 2'] => h2:fresh",
+                    "p[style-name='Heading 3'] => h3:fresh",
+                    "p[style-name='Title']     => h1.title:fresh",
+                    "p[style-name='Subtitle']  => h2.subtitle:fresh",
+                    "p[style-name='Quote']     => blockquote:fresh",
+                    "b => strong", "i => em", "u => u"
+                ],
+                includeDefaultStyleMap: true
+            };
+            const result = await mammoth.convertToHtml({ arrayBuffer }, options);
+            preview.innerHTML = result.value;
+            preview.classList.remove('empty');
+            history.stack = []; history.idx = -1;
+            pushHistory('opened ' + file.name);
+            updateStats();
+            toast(`Loaded "${file.name}"`, 'success');
+            if (result.messages.length > 0) console.warn('mammoth messages:', result.messages);
+        } catch (err) {
+            console.error(err);
+            toast('Failed to parse .docx: ' + err.message, 'error', 6000);
+        }
+    }
+
+    fileInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (file) await parseDocxFile(file);
+        fileInput.value = '';
+    });
+
+    /* =========================================================
+       Drag-and-drop file upload
+       ========================================================= */
+    let dragDepth = 0;
+    window.addEventListener('dragenter', (e) => {
+        if (!e.dataTransfer || !Array.from(e.dataTransfer.types).includes('Files')) return;
+        dragDepth++;
+        dropOverlay.classList.add('show');
+    });
+    window.addEventListener('dragover', (e) => { e.preventDefault(); });
+    window.addEventListener('dragleave', () => {
+        dragDepth = Math.max(0, dragDepth - 1);
+        if (dragDepth === 0) dropOverlay.classList.remove('show');
+    });
+    window.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        dragDepth = 0;
+        dropOverlay.classList.remove('show');
+        const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+        if (file) await parseDocxFile(file);
+    });
+
+    /* =========================================================
+       EXPORT — .txt / .html / .docx
+       ========================================================= */
+    function exportAs(fmt) {
+        const text = preview.innerText || '';
+        const html = preview.innerHTML || '';
+        if (!text.trim()) { toast('Nothing to export — preview is empty.', 'warning'); return; }
+
+        if (fmt === 'txt') {
+            downloadBlob(new Blob([text], { type: 'text/plain;charset=utf-8' }), 'document.txt');
+            toast('Downloaded document.txt', 'success');
+        } else if (fmt === 'html') {
+            const full = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Exported</title></head><body>${html}</body></html>`;
+            downloadBlob(new Blob([full], { type: 'text/html;charset=utf-8' }), 'document.html');
+            toast('Downloaded document.html', 'success');
+        } else if (fmt === 'docx') {
+            if (typeof window.htmlDocx === 'undefined') {
+                toast('html-docx-js library not loaded.', 'error');
+                return;
+            }
+            const docHtml = `
+                <!DOCTYPE html>
+                <html xmlns:o="urn:schemas-microsoft-com:office:office"
+                      xmlns:w="urn:schemas-microsoft-com:office:word"
+                      xmlns="http://www.w3.org/TR/REC-html40">
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; }
+                        table { border-collapse: collapse; margin: 8pt 0; }
+                        table td, table th { border: 1px solid #888; padding: 4pt 8pt; vertical-align: top; }
+                        table th { background: #f1f5f9; font-weight: bold; }
+                        h1 { font-size: 18pt; } h2 { font-size: 14pt; } h3 { font-size: 12pt; }
+                        blockquote { border-left: 3px solid #ccc; padding-left: 8pt; color: #555; }
+                        img { max-width: 100%; }
+                    </style>
+                </head>
+                <body>${html}</body>
+                </html>`;
+            try {
+                const blob = window.htmlDocx.asBlob(docHtml, { orientation: 'portrait', margins: { top: 720 } });
+                if (typeof window.saveAs === 'function') window.saveAs(blob, 'document.docx');
+                else downloadBlob(blob, 'document.docx');
+                toast('Downloaded document.docx', 'success');
+            } catch (err) {
+                console.error(err);
+                toast('Failed to build .docx: ' + err.message, 'error', 6000);
+            }
+        }
+    }
+
+    // Download dropdown
+    downloadMenuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        downloadMenu.classList.toggle('show');
+    });
+    downloadMenu.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-fmt]');
+        if (!btn) return;
+        exportAs(btn.dataset.fmt);
+        downloadMenu.classList.remove('show');
+    });
+    document.addEventListener('click', () => downloadMenu.classList.remove('show'));
+
+    /* =========================================================
+       2. ORGANIC IMPERFECTION INJECTION (selection-aware)
+       ========================================================= */
+    intensity.addEventListener('input', () => { intensityValue.textContent = intensity.value; });
+
+    function flipFirstCase(word) {
+        if (!word) return word;
+        const first = word[0];
+        if (first === first.toUpperCase() && first !== first.toLowerCase())
+            return first.toLowerCase() + word.slice(1);
+        if (first === first.toLowerCase() && first !== first.toUpperCase())
+            return first.toUpperCase() + word.slice(1);
+        return word;
+    }
+    function swapArticle(word) {
+        const lower = word.toLowerCase();
+        const articles = ['a', 'an', 'the'];
+        if (!articles.includes(lower)) return word;
+        const replacement = pickRandom(articles.filter(a => a !== lower));
+        return word[0] === word[0].toUpperCase()
+            ? replacement[0].toUpperCase() + replacement.slice(1)
+            : replacement;
+    }
+    function transposeLetters(word) {
+        const m = word.match(/^(\W*)([A-Za-z]+)(\W*)$/);
+        if (!m) return word;
+        const [, lead, core, trail] = m;
+        if (core.length <= 4) return word;
+        const i = 1 + Math.floor(Math.random() * (core.length - 3));
+        const arr = core.split('');
+        [arr[i], arr[i+1]] = [arr[i+1], arr[i]];
+        return lead + arr.join('') + trail;
+    }
+    function driftPunctuation(text) {
+        // Sometimes turn period into comma, or vice-versa
+        return text
+            .replace(/\.(\s)/g, (m, ws) => chance(0.2) ? ',' + ws : m)
+            .replace(/,(\s)/g, (m, ws) => chance(0.15) ? '.' + ws.replace(/^\s+/, ' ') : m);
+    }
+    function injectDoubleSpaces(text) {
+        return text.replace(/ /g, (m) => chance(0.05) ? '  ' : m);
+    }
+
+    /** Apply imperfections to a list of text nodes. */
+    function applyImperfectionsTo(textNodes) {
+        const probability = parseInt(intensity.value, 10) / 100;
+        const doCap   = capVariance.checked;
+        const doArt   = articleSwap.checked;
+        const doTrans = transposition.checked;
+        const doPunct = punctuationDrift.checked;
+        const doSpace = doubleSpace.checked;
+
+        let mutated = 0;
+        textNodes.forEach(node => {
+            let value = node.nodeValue;
+
+            if (doPunct && chance(probability)) value = driftPunctuation(value);
+            if (doSpace && chance(probability)) value = injectDoubleSpaces(value);
+
+            const tokens = value.split(/(\s+)/);
+            for (let i = 0; i < tokens.length; i++) {
+                const tok = tokens[i];
+                if (!tok || /^\s+$/.test(tok)) continue;
+                let newTok = tok;
+                if (doArt && chance(probability)) {
+                    const s = swapArticle(newTok); if (s !== newTok) { newTok = s; mutated++; }
+                }
+                if (doCap && chance(probability)) {
+                    const s = flipFirstCase(newTok); if (s !== newTok) { newTok = s; mutated++; }
+                }
+                if (doTrans && chance(probability)) {
+                    const s = transposeLetters(newTok); if (s !== newTok) { newTok = s; mutated++; }
+                }
+                tokens[i] = newTok;
+            }
+            node.nodeValue = tokens.join('');
+        });
+        return mutated;
+    }
+
+    applyImperfectionsBtn.addEventListener('click', () => {
+        if (!preview.innerText.trim()) { toast('Preview is empty.', 'warning'); return; }
+        if (!capVariance.checked && !articleSwap.checked && !transposition.checked &&
+            !punctuationDrift.checked && !doubleSpace.checked) {
+            toast('Enable at least one variation type.', 'warning');
+            return;
+        }
+
+        const range = getPreviewSelectionRange();
+        const scope = range ? 'selection' : 'document';
+        const targetNodes = range
+            ? collectTextNodesInRange(range)
+            : collectTextNodes(preview);
+
+        const mutated = applyImperfectionsTo(targetNodes);
+        pushHistory('imperfections (' + scope + ')');
+        updateStats();
+        if (highlightComplex.checked) applyComplexHighlighting();
+        toast(`Applied ${mutated} variation${mutated === 1 ? '' : 's'} to ${scope}.`, 'success');
+    });
+
+    /* =========================================================
+       3. PARAPHRASE (selection-aware, mock async)
+       Replace the mock with a real API call to swap.
+       ========================================================= */
+    async function paraphraseText(text, style = 'standard') {
+        // Mock latency
+        await new Promise(r => setTimeout(r, 600));
+
+        // Synonym substitution dictionary used by all styles
+        const SYN = {
+            standard: {
+                'use': 'employ', 'make': 'create', 'show': 'display', 'big': 'large',
+                'small': 'minor', 'help': 'assist', 'start': 'begin', 'end': 'conclude',
+                'get': 'obtain', 'find': 'discover', 'think': 'believe', 'important': 'crucial'
+            },
+            formal: {
+                "can't": 'cannot', "don't": 'do not', "won't": 'will not', "it's": 'it is',
+                'get': 'obtain', 'use': 'utilize', 'start': 'commence', 'help': 'facilitate',
+                'show': 'demonstrate', 'end': 'terminate', 'big': 'substantial', 'small': 'modest'
+            },
+            casual: {
+                'cannot': "can't", 'do not': "don't", 'will not': "won't", 'it is': "it's",
+                'utilize': 'use', 'commence': 'start', 'facilitate': 'help',
+                'demonstrate': 'show', 'terminate': 'end', 'substantial': 'big'
+            },
+            concise: {
+                'in order to': 'to', 'due to the fact that': 'because',
+                'at this point in time': 'now', 'a large number of': 'many',
+                'in the event that': 'if', 'utilize': 'use', 'commence': 'start',
+                'approximately': 'about'
+            }
+        };
+        const dict = SYN[style] || SYN.standard;
+        let result = text;
+        Object.entries(dict).forEach(([from, to]) => {
+            const re = new RegExp('\\b' + from.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '\\b', 'gi');
+            result = result.replace(re, to);
+        });
+
+        // Sentence-level rearrangement: split, optionally rephrase 30% of sentences
+        const sentences = result.match(/[^.!?]+[.!?]+|\S[^.!?]*$/g) || [result];
+        const rewritten = sentences.map(s => {
+            const trimmed = s.trim();
+            if (!trimmed) return s;
+            if (!chance(0.3)) return s;
+
+            // Try a structural twist depending on style
+            if (style === 'concise') return s.replace(/^\s*The\s+/i, '');
+            if (style === 'formal' && /^I\s/i.test(trimmed))
+                return s.replace(/^I\s+/i, 'One may ');
+            if (style === 'casual' && /^However,?\s/i.test(trimmed))
+                return s.replace(/^However,?\s+/i, 'But ');
+            if (trimmed.includes(',')) {
+                const idx = s.indexOf(',');
+                const left = s.slice(0, idx).trim();
+                const right = s.slice(idx + 1).trim().replace(/[.!?]+$/, '');
+                if (left && right) return `${right.charAt(0).toUpperCase() + right.slice(1)}, ${left.charAt(0).toLowerCase() + left.slice(1)}.`;
+            }
+            return s;
+        });
+        return rewritten.join('');
+
+        /* ---- To swap in a real API later ----
+        const res = await fetch('/api/paraphrase', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text, style })
+        });
+        const data = await res.json();
+        return data.rewritten;
+        */
+    }
+
+    paraphraseBtn.addEventListener('click', async () => {
+        if (!preview.innerText.trim()) { toast('Preview is empty.', 'warning'); return; }
+        const range = getPreviewSelectionRange();
+        const style = paraphraseStyle.value;
+
+        paraphraseBtn.disabled = true;
+        const originalLabel = paraphraseBtn.innerHTML;
+        paraphraseBtn.innerHTML = '<span class="spinner"></span> Paraphrasing…';
+
+        try {
+            if (range) {
+                // Selection only — preserve surrounding markup
+                const original = range.toString();
+                const rewritten = await paraphraseText(original, style);
+                range.deleteContents();
+                const wrapper = document.createElement('span');
+                wrapper.className = 'pulse-highlight';
+                wrapper.textContent = rewritten;
+                range.insertNode(wrapper);
+                // Unwrap span after animation finishes (keeps DOM clean)
+                setTimeout(() => {
+                    if (wrapper.parentNode) {
+                        const t = document.createTextNode(wrapper.textContent);
+                        wrapper.parentNode.replaceChild(t, wrapper);
+                        preview.normalize();
+                    }
+                }, 1300);
+                window.getSelection().removeAllRanges();
+                pushHistory('paraphrase (selection)');
+                toast(`Paraphrased selection (${style})`, 'success');
+            } else {
+                // Whole document — process text nodes in place
+                const nodes = collectTextNodes(preview);
+                for (const node of nodes) {
+                    node.nodeValue = await paraphraseText(node.nodeValue, style);
+                }
+                pushHistory('paraphrase (document)');
+                toast(`Paraphrased document (${style})`, 'success');
+            }
+            updateStats();
+            if (highlightComplex.checked) applyComplexHighlighting();
+        } catch (err) {
+            console.error(err);
+            toast('Paraphrase failed: ' + err.message, 'error', 6000);
+        } finally {
+            paraphraseBtn.disabled = false;
+            paraphraseBtn.innerHTML = originalLabel;
+        }
+    });
+
+    /* =========================================================
+       4. TONE & COMPLEX WORDS
+       ========================================================= */
+    async function adjustTone(text, tone) {
+        await new Promise(r => setTimeout(r, 100)); // light latency
+        if (tone === 'simple') {
+            let r = text;
+            Object.entries(COMPLEX_WORDS).forEach(([c, s]) => {
+                r = r.replace(new RegExp(`\\b${c}\\b`, 'gi'), s);
+            });
+            return r;
+        }
+        if (tone === 'academic') {
+            return text
+                .replace(/\bcan't\b/gi, 'cannot').replace(/\bdon't\b/gi, 'do not')
+                .replace(/\bwon't\b/gi, 'will not').replace(/\bit's\b/gi, 'it is')
+                .replace(/\bget\b/gi, 'obtain').replace(/\buse\b/gi, 'utilize')
+                .replace(/\bstart\b/gi, 'commence');
+        }
+        if (tone === 'conversational') {
+            return text
+                .replace(/\bcannot\b/gi, "can't").replace(/\bdo not\b/gi, "don't")
+                .replace(/\bwill not\b/gi, "won't").replace(/\bit is\b/gi, "it's")
+                .replace(/\butilize\b/gi, 'use').replace(/\bcommence\b/gi, 'start');
+        }
+        return text;
+    }
+
+    applyToneBtn.addEventListener('click', async () => {
+        const tone = toneSelect.value;
+        if (tone === 'none') { toast('Select a tone first.', 'warning'); return; }
+        if (!preview.innerText.trim()) { toast('Preview is empty.', 'warning'); return; }
+
+        applyToneBtn.disabled = true;
+        const orig = applyToneBtn.innerHTML;
+        applyToneBtn.innerHTML = '<span class="spinner"></span> Adjusting…';
+
+        try {
+            const range = getPreviewSelectionRange();
+            const nodes = range ? collectTextNodesInRange(range) : collectTextNodes(preview);
+            for (const node of nodes) {
+                node.nodeValue = await adjustTone(node.nodeValue, tone);
+            }
+            pushHistory('tone: ' + tone);
+            updateStats();
+            if (highlightComplex.checked) applyComplexHighlighting();
+            toast(`Applied "${tone}" tone${range ? ' to selection' : ''}.`, 'success');
+        } catch (err) {
+            console.error(err);
+            toast('Tone failed: ' + err.message, 'error', 6000);
+        } finally {
+            applyToneBtn.disabled = false;
+            applyToneBtn.innerHTML = orig;
+        }
+    });
+
+    function applyComplexHighlighting() {
+        removeComplexHighlighting();
+        const nodes = collectTextNodes(preview);
+        const re = new RegExp('\\b(' + Object.keys(COMPLEX_WORDS).join('|') + ')\\b', 'gi');
+        nodes.forEach(node => {
+            const text = node.nodeValue;
+            if (!re.test(text)) { re.lastIndex = 0; return; }
+            re.lastIndex = 0;
+            const frag = document.createDocumentFragment();
+            let lastIdx = 0; let m;
+            while ((m = re.exec(text)) !== null) {
+                if (m.index > lastIdx) frag.appendChild(document.createTextNode(text.slice(lastIdx, m.index)));
+                const span = document.createElement('span');
+                span.className = 'complex-word';
+                span.textContent = m[0];
+                span.dataset.simple = COMPLEX_WORDS[m[0].toLowerCase()];
+                frag.appendChild(span);
+                lastIdx = m.index + m[0].length;
+            }
+            if (lastIdx < text.length) frag.appendChild(document.createTextNode(text.slice(lastIdx)));
+            node.parentNode.replaceChild(frag, node);
+        });
+    }
+    function removeComplexHighlighting() {
+        preview.querySelectorAll('.complex-word').forEach(span => {
+            const t = document.createTextNode(span.textContent);
+            span.parentNode.replaceChild(t, span);
+        });
+        preview.normalize();
+    }
+
+    highlightComplex.addEventListener('change', () => {
+        if (highlightComplex.checked) { applyComplexHighlighting(); toast('Complex words highlighted.', 'info'); }
+        else { removeComplexHighlighting(); toast('Highlighting removed.', 'info'); }
+    });
+
+    let currentPopup = null;
+    preview.addEventListener('click', (e) => {
+        if (currentPopup && !currentPopup.contains(e.target)) { currentPopup.remove(); currentPopup = null; }
+        const target = e.target;
+        if (!target.classList || !target.classList.contains('complex-word')) return;
+        const simple = target.dataset.simple || COMPLEX_WORDS[target.textContent.toLowerCase()];
+        if (!simple) return;
+
+        const popup = document.createElement('div');
+        popup.className = 'synonym-popup';
+        popup.innerHTML = `Simpler: <strong>${simple}</strong><button data-action="replace">Replace</button>`;
+        const rect = target.getBoundingClientRect();
+        popup.style.left = (window.scrollX + rect.left) + 'px';
+        popup.style.top  = (window.scrollY + rect.bottom + 6) + 'px';
+        document.body.appendChild(popup);
+        currentPopup = popup;
+
+        popup.querySelector('button[data-action="replace"]').addEventListener('click', (ev) => {
+            ev.stopPropagation();
+            const orig = target.textContent;
+            let replacement = simple;
+            if (orig[0] === orig[0].toUpperCase()) replacement = simple[0].toUpperCase() + simple.slice(1);
+            target.parentNode.replaceChild(document.createTextNode(replacement), target);
+            popup.remove();
+            currentPopup = null;
+            pushHistory('simplify word');
+            updateStats();
+        });
+    });
+    document.addEventListener('click', (e) => {
+        if (currentPopup && !currentPopup.contains(e.target) && !e.target.classList.contains('complex-word')) {
+            currentPopup.remove(); currentPopup = null;
+        }
+    });
+
+    /* =========================================================
+       5. LIVE STATS + READABILITY
+       ========================================================= */
+    const debounceTimers = {};
+    function debounce(fn, ms) {
+        const key = fn.name || Math.random().toString(36);
+        return (...args) => {
+            clearTimeout(debounceTimers[key]);
+            debounceTimers[key] = setTimeout(() => fn(...args), ms);
+        };
+    }
+    function countSyllables(word) {
+        word = word.toLowerCase().replace(/[^a-z]/g, '');
+        if (word.length <= 3) return word.length ? 1 : 0;
+        word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, '').replace(/^y/, '');
+        const m = word.match(/[aeiouy]{1,2}/g);
+        return m ? m.length : 1;
+    }
+    function updateStats() {
+        const text = (preview.innerText || '').trim();
+        if (!text) {
+            statWords.textContent = statChars.textContent = statSentences.textContent =
+                statParagraphs.textContent = statReadTime.textContent = '0';
+            readability.textContent = '—';
+            readability.className = 'readability';
+            return;
+        }
+        const words      = text.match(/\b[\w'-]+\b/g) || [];
+        const sentences  = text.split(/[.!?]+(?:\s|$)/).filter(s => s.trim().length > 0);
+        const paragraphs = text.split(/\n+/).filter(p => p.trim().length > 0);
+        const sCount     = Math.max(1, sentences.length);
+        const syllables  = words.reduce((a, w) => a + countSyllables(w), 0);
+        const fk = (0.39 * (words.length / sCount)) + (11.8 * (syllables / Math.max(1, words.length))) - 15.59;
+
+        statWords.textContent      = words.length.toLocaleString();
+        statChars.textContent      = text.length.toLocaleString();
+        statSentences.textContent  = sCount.toLocaleString();
+        statParagraphs.textContent = paragraphs.length.toLocaleString();
+        statReadTime.textContent   = Math.max(1, Math.round(words.length / 200));
+
+        const grade = Math.max(0, Math.round(fk * 10) / 10);
+        readability.textContent = `Grade ${grade}`;
+        readability.className = 'readability ' + (grade < 8 ? 'read-easy' : grade < 13 ? 'read-medium' : 'read-hard');
+        readability.title = `Flesch-Kincaid grade ${grade} — ${grade<8?'easy':grade<13?'moderate':'difficult'}`;
+    }
+    updateStats();
+
+    /* =========================================================
+       6. FIND & REPLACE
+       ========================================================= */
+    let findMatches = []; let findCurrentIdx = -1;
+
+    function clearFindHighlights() {
+        preview.querySelectorAll('mark.find-match, mark.find-current').forEach(m => {
+            const t = document.createTextNode(m.textContent);
+            m.parentNode.replaceChild(t, m);
+        });
+        preview.normalize();
+        findMatches = []; findCurrentIdx = -1;
+    }
+    function runFind() {
+        clearFindHighlights();
+        const q = findInput.value;
+        if (!q) { findCount.textContent = ''; return; }
+        let regex;
+        try {
+            regex = new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), findCase.checked ? 'g' : 'gi');
+        } catch { findCount.textContent = 'invalid'; return; }
+
+        collectTextNodes(preview).forEach(node => {
+            const text = node.nodeValue;
+            if (!regex.test(text)) { regex.lastIndex = 0; return; }
+            regex.lastIndex = 0;
+            const frag = document.createDocumentFragment();
+            let lastIdx = 0; let m;
+            while ((m = regex.exec(text)) !== null) {
+                if (m.index > lastIdx) frag.appendChild(document.createTextNode(text.slice(lastIdx, m.index)));
+                const mark = document.createElement('mark');
+                mark.className = 'find-match';
+                mark.textContent = m[0];
+                frag.appendChild(mark);
+                lastIdx = m.index + m[0].length;
+            }
+            if (lastIdx < text.length) frag.appendChild(document.createTextNode(text.slice(lastIdx)));
+            node.parentNode.replaceChild(frag, node);
+        });
+        findMatches = Array.from(preview.querySelectorAll('mark.find-match'));
+        findCount.textContent = findMatches.length ? `1 of ${findMatches.length}` : '0 matches';
+        if (findMatches.length) focusMatch(0);
+    }
+    function focusMatch(idx) {
+        if (!findMatches.length) return;
+        findMatches.forEach(m => { m.className = 'find-match'; });
+        findCurrentIdx = (idx + findMatches.length) % findMatches.length;
+        const cur = findMatches[findCurrentIdx];
+        cur.className = 'find-current';
+        cur.scrollIntoView({ block: 'center', behavior: 'smooth' });
+        findCount.textContent = `${findCurrentIdx + 1} of ${findMatches.length}`;
+    }
+
+    findInput.addEventListener('input', () => debounce(runFind, 200)());
+    findCase.addEventListener('change', runFind);
+    findNextBtn.addEventListener('click', () => focusMatch(findCurrentIdx + 1));
+    findPrevBtn.addEventListener('click', () => focusMatch(findCurrentIdx - 1));
+    replaceOneBtn.addEventListener('click', () => {
+        if (findCurrentIdx < 0 || !findMatches[findCurrentIdx]) return;
+        findMatches[findCurrentIdx].parentNode.replaceChild(document.createTextNode(replaceInput.value), findMatches[findCurrentIdx]);
+        preview.normalize();
+        pushHistory('replace one');
+        runFind();
+        updateStats();
+    });
+    replaceAllBtn.addEventListener('click', () => {
+        if (!findMatches.length) return;
+        const n = findMatches.length;
+        findMatches.forEach(m => m.parentNode.replaceChild(document.createTextNode(replaceInput.value), m));
+        preview.normalize();
+        clearFindHighlights();
+        findCount.textContent = `${n} replaced`;
+        pushHistory('replace all');
+        updateStats();
+        toast(`Replaced ${n} occurrence${n === 1 ? '' : 's'}.`, 'success');
+    });
+
+    function openFindBar()  { findBar.classList.add('open');    setTimeout(() => { findInput.focus(); findInput.select(); }, 100); }
+    function closeFindBar() { findBar.classList.remove('open'); clearFindHighlights(); findCount.textContent = ''; }
+    findToggleBtn.addEventListener('click', () => findBar.classList.contains('open') ? closeFindBar() : openFindBar());
+    findCloseBtn.addEventListener('click', closeFindBar);
+
+    /* =========================================================
+       7. THEME TOGGLE (persisted in localStorage)
+       ========================================================= */
+    function applyTheme(theme) {
+        document.documentElement.setAttribute('data-theme', theme);
+        themeBtn.textContent = theme === 'dark' ? '☀' : '☾';
+        themeBtn.title = `Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`;
+        try { localStorage.setItem('tve-theme', theme); } catch {}
+    }
+    function toggleTheme() {
+        const cur = document.documentElement.getAttribute('data-theme') || 'light';
+        applyTheme(cur === 'dark' ? 'light' : 'dark');
+    }
+    themeBtn.addEventListener('click', toggleTheme);
+    try {
+        const saved = localStorage.getItem('tve-theme');
+        if (saved) applyTheme(saved);
+    } catch {}
+
+    /* =========================================================
+       8. HELP MODAL
+       ========================================================= */
+    function openHelp()  { helpModal.classList.add('show'); }
+    function closeHelp() { helpModal.classList.remove('show'); }
+    helpBtn.addEventListener('click', openHelp);
+    helpCloseBtn.addEventListener('click', closeHelp);
+    helpModal.addEventListener('click', (e) => { if (e.target === helpModal) closeHelp(); });
+
+    /* =========================================================
+       9. GLOBAL KEYBOARD SHORTCUTS
+       ========================================================= */
+    document.addEventListener('keydown', (e) => {
+        const ctrl = e.ctrlKey || e.metaKey;
+        const tag  = (e.target.tagName || '').toLowerCase();
+        const inField = tag === 'input' || tag === 'select';
+
+        // Ctrl+F - Find
+        if (ctrl && e.key.toLowerCase() === 'f') {
+            e.preventDefault();
+            openFindBar();
+            return;
+        }
+        // Ctrl+Z - Undo (only when NOT typing into the preview, otherwise let native undo run)
+        if (ctrl && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+            // Use our undo for action-level undo; if in preview let browser undo too
+            if (e.target !== preview) {
+                e.preventDefault();
+                undo();
+            }
+            return;
+        }
+        // Ctrl+Y or Ctrl+Shift+Z - Redo
+        if ((ctrl && e.key.toLowerCase() === 'y') || (ctrl && e.shiftKey && e.key.toLowerCase() === 'z')) {
+            if (e.target !== preview) {
+                e.preventDefault();
+                redo();
+            }
+            return;
+        }
+        // Ctrl+I - Imperfections
+        if (ctrl && e.key.toLowerCase() === 'i' && !inField) {
+            e.preventDefault(); applyImperfectionsBtn.click(); return;
+        }
+        // Ctrl+P - Paraphrase
+        if (ctrl && e.key.toLowerCase() === 'p' && !inField) {
+            e.preventDefault(); paraphraseBtn.click(); return;
+        }
+        // Ctrl+D - Theme
+        if (ctrl && e.key.toLowerCase() === 'd') {
+            e.preventDefault(); toggleTheme(); return;
+        }
+        // ? - Help
+        if (e.key === '?' && !inField && e.target !== preview) {
+            e.preventDefault(); openHelp(); return;
+        }
+        // Esc - Close modal or find bar
+        if (e.key === 'Escape') {
+            if (helpModal.classList.contains('show')) closeHelp();
+            else if (findBar.classList.contains('open')) closeFindBar();
+            else if (currentPopup) { currentPopup.remove(); currentPopup = null; }
+            return;
+        }
+        // Enter in find input
+        if (e.key === 'Enter' && document.activeElement === findInput) {
+            e.preventDefault();
+            focusMatch(findCurrentIdx + (e.shiftKey ? -1 : 1));
+        }
+    });
+
+    /* =========================================================
+       10. INPUT TRACKING (history + stats)
+       ========================================================= */
+    let inputDebounce;
+    preview.addEventListener('input', () => {
+        preview.classList.toggle('empty', !preview.innerText.trim());
+        updateStats();
+        clearTimeout(inputDebounce);
+        inputDebounce = setTimeout(() => pushHistory('typing'), 600);
+    });
+
+    // Initial empty snapshot so the first action has something to undo back to
+    pushHistory('initial');
+
+    </script>
+</body>
+</html>
