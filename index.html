@@ -109,6 +109,9 @@
         box-shadow: var(--shadow-lg);
         transition: background 0.4s var(--ease);
     }
+    /* Grid children need explicit min-height:0, otherwise their implicit
+       min-height:auto lets them grow past the row, breaking inner scroll. */
+    .app > * { min-height: 0; min-width: 0; }
 
     /* ============================================================
        LEFT SIDEBAR
@@ -351,6 +354,7 @@
         display: flex;
         flex-direction: column;
         min-width: 0;
+        min-height: 0;                /* allow inner .preview-pane to scroll */
         background: var(--panel);
         border-right: 1px solid var(--border);
         transition: background 0.4s var(--ease), border-color 0.4s var(--ease);
@@ -409,18 +413,25 @@
     /* Preview area */
     .preview-pane {
         flex: 1;
+        min-height: 0;                    /* allow scrolling inside flex parent */
         overflow-y: auto;
+        overflow-x: hidden;
         padding: 20px;
         position: relative;
         background: var(--panel);
+        scroll-behavior: smooth;
+        overscroll-behavior: contain;
         transition: background 0.4s var(--ease);
+    }
+    .sidebar-left, .module-list {
+        scroll-behavior: smooth;
+        overscroll-behavior: contain;
     }
     #preview {
         background: var(--panel-2);
         border: 1px solid var(--border);
         border-radius: var(--radius);
         padding: 32px 40px;
-        min-height: 100%;
         font-size: 15px;
         line-height: 1.75;
         outline: none;
@@ -617,6 +628,7 @@
     }
     .module-list {
         flex: 1;
+        min-height: 0;
         overflow-y: auto;
         padding: 12px;
         display: flex;
@@ -2152,8 +2164,35 @@
         }
         const range = getPreviewSelectionRange();
         const scope = range ? 'selection' : 'document';
-        const nodes = range ? collectTextNodesInRange(range) : collectTextNodes(preview);
-        const m = applyImperfectionsTo(nodes);
+        let m = 0;
+
+        if (range) {
+            // Extract preserves nested styling (b/i/a/etc.) within the selection.
+            const fragment = range.extractContents();
+            const walker = document.createTreeWalker(fragment, NodeFilter.SHOW_TEXT, {
+                acceptNode: (n) => (n.nodeValue && n.nodeValue.trim()) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT
+            });
+            const nodes = [];
+            let n; while ((n = walker.nextNode())) nodes.push(n);
+            m = applyImperfectionsTo(nodes);
+
+            const wrap = document.createElement('span');
+            wrap.className = 'pulse-highlight';
+            wrap.appendChild(fragment);
+            range.insertNode(wrap);
+            setTimeout(() => {
+                if (wrap.parentNode) {
+                    const parent = wrap.parentNode;
+                    while (wrap.firstChild) parent.insertBefore(wrap.firstChild, wrap);
+                    parent.removeChild(wrap);
+                    preview.normalize();
+                }
+            }, 1300);
+            window.getSelection().removeAllRanges();
+        } else {
+            m = applyImperfectionsTo(collectTextNodes(preview));
+        }
+
         pushHistory('imperfections (' + scope + ')');
         updateStats();
         if (highlightComplex.checked) applyComplexHighlighting();
@@ -2191,23 +2230,45 @@
         }).join('');
     }
 
+    /**
+     * Run an async text-transform across the preview.
+     *  - No selection: walk text nodes in place, mutating only `nodeValue`.
+     *    Parent elements (b, i, a, p, h1, table cells, …) are never touched.
+     *  - With selection: extract the range's contents into a DocumentFragment,
+     *    walk and transform text nodes inside the fragment, then re-insert.
+     *    The fragment carries the full nested structure, so bold / italic /
+     *    links / list items / table cells inside the selection are preserved.
+     */
     async function runOnTextNodes(asyncFn, range, label) {
-        const nodes = range ? collectTextNodesInRange(range) : collectTextNodes(preview);
         if (range) {
-            const original = range.toString();
-            const rewritten = await asyncFn(original);
-            range.deleteContents();
+            const fragment = range.extractContents();
+
+            // Collect text nodes within the fragment (skip whitespace-only).
+            const walker = document.createTreeWalker(fragment, NodeFilter.SHOW_TEXT, {
+                acceptNode: (n) => (n.nodeValue && n.nodeValue.trim()) ? NodeFilter.FILTER_ACCEPT : NodeFilter.FILTER_REJECT
+            });
+            const nodes = [];
+            let n; while ((n = walker.nextNode())) nodes.push(n);
+            for (const node of nodes) node.nodeValue = await asyncFn(node.nodeValue);
+
+            // Wrap in a brief pulse-highlight span (purely visual, unwrapped after animation).
             const wrap = document.createElement('span');
-            wrap.className = 'pulse-highlight'; wrap.textContent = rewritten;
+            wrap.className = 'pulse-highlight';
+            wrap.appendChild(fragment);
             range.insertNode(wrap);
+
+            // Unwrap once the pulse animation finishes so we don't leave junk spans behind.
             setTimeout(() => {
                 if (wrap.parentNode) {
-                    wrap.parentNode.replaceChild(document.createTextNode(wrap.textContent), wrap);
+                    const parent = wrap.parentNode;
+                    while (wrap.firstChild) parent.insertBefore(wrap.firstChild, wrap);
+                    parent.removeChild(wrap);
                     preview.normalize();
                 }
             }, 1300);
             window.getSelection().removeAllRanges();
         } else {
+            const nodes = collectTextNodes(preview);
             for (const node of nodes) node.nodeValue = await asyncFn(node.nodeValue);
         }
         pushHistory(label);
